@@ -21,3 +21,15 @@ Requires `sunxi-tools` on the host.
 2. Connect the micro-USB port to the host.
 3. `sudo dev/fel-boot-ram.sh`
 4. A serial console shows up as `/dev/ttyACM0` and a USB network interface with the board at `192.168.81.1`.
+
+Host notes:
+
+- The board runs no DHCP server: give the host's new USB network interface `192.168.81.2/24`, e.g. `sudo ip addr add 192.168.81.2/24 dev <iface>`.
+- Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
+
+Status signals while the FEL jumper is in:
+
+- LED off: U-Boot or early kernel.
+- LED blinking: kernel running.
+- LED solid: USB console ready.
+- Board back in FEL mode (`lsusb` shows `1f3a:efe8`): boot failed. Within seconds means U-Boot or FIT; about 10 s after the blinking started means kernel panic.
