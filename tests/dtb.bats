@@ -1,13 +1,30 @@
 DTB=build/out/sun5i-r8-chip-alpine.dtb
 NAND=/soc/nand-controller@1c03000
+PARTS=$NAND/nand@0/partitions
 
 @test "nand controller is enabled" {
 	[ "$(fdtget -t s $DTB $NAND status)" = okay ]
 }
 
-@test "whole nand is a single read-only partition" {
-	[ "$(fdtget -t s $DTB $NAND/nand@0/partitions/partition@0 label)" = nand ]
-	fdtget $DTB $NAND/nand@0/partitions/partition@0 read-only
+@test "nand is split into boot and UBI partitions" {
+	[ "$(fdtget -t s $DTB $PARTS/partition@0 label)" = spl ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@400000 label)" = spl-backup ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@800000 label)" = uboot ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@c00000 label)" = boot-a ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@2c00000 label)" = boot-b ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@4c00000 label)" = UBI ]
+}
+
+@test "only the UBI partition is writable" {
+	for p in partition@0 partition@400000 partition@800000 partition@c00000 partition@2c00000; do
+		fdtget $DTB $PARTS/$p read-only
+	done
+	run fdtget $DTB $PARTS/partition@4c00000 read-only
+	[ "$status" -ne 0 ]
+}
+
+@test "UBI partition runs the mlc nand in slc mode" {
+	fdtget $DTB $PARTS/partition@4c00000 slc-mode
 }
 
 @test "kernel never writes a bad block table to the nand" {
