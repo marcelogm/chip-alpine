@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+configfs=${1:-/sys/kernel/config}
+udc_class=${2:-/sys/class/udc}
+g=$configfs/usb_gadget/chip
+
+mkdir -p "$g/strings/0x409"
+echo 0x1d6b > "$g/idVendor"
+echo 0x0104 > "$g/idProduct"
+echo chip-alpine > "$g/strings/0x409/manufacturer"
+echo chip-alpine > "$g/strings/0x409/product"
+
+mkdir -p "$g/functions/acm.usb0" "$g/functions/ncm.usb0" "$g/configs/c.1"
+echo 500 > "$g/configs/c.1/MaxPower"
+echo 02:c4:1b:00:00:01 > "$g/functions/ncm.usb0/host_addr"
+echo 02:c4:1b:00:00:02 > "$g/functions/ncm.usb0/dev_addr"
+ln -s "$g/functions/acm.usb0" "$g/configs/c.1/"
+ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/"
+
+tries=0
+until [ -n "$(ls "$udc_class")" ] || [ "$tries" -ge 50 ]; do
+	sleep 0.2
+	tries=$((tries + 1))
+done
+
+ls "$udc_class" | head -n 1 > "$g/UDC"

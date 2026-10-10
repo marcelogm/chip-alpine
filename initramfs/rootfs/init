@@ -1,0 +1,16 @@
+#!/bin/busybox sh
+/bin/busybox mount -t proc proc /proc
+/bin/busybox --install -s
+mount -t devtmpfs devtmpfs /dev
+exec 0</dev/console 1>/dev/console 2>&1
+mount -t sysfs sysfs /sys
+mount -t configfs configfs /sys/kernel/config
+mount -t tmpfs tmpfs /run
+mount -t tmpfs tmpfs /tmp
+chip-usb-gadget /sys/kernel/config /sys/class/udc
+ip addr add 192.168.81.1/24 dev usb0
+ip link set usb0 up
+echo default-on > /sys/class/leds/chip:white:status/trigger
+modprobe r8723bs &
+
+exec /sbin/init

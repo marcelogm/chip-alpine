@@ -1,0 +1,6 @@
+alpine-baselayout
+busybox
+iw
+mtd-utils-nand
+mtd-utils-ubi
+wpa_supplicant

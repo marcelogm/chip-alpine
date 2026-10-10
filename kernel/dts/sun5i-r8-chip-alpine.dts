@@ -1,0 +1,37 @@
+#include "sun5i-r8-chip.dts"
+
+/ {
+	model = "NextThing C.H.I.P. (chip-alpine)";
+};
+
+&{/leds/led-0} {
+	linux,default-trigger = "heartbeat";
+};
+
+&nfc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&nand_pins &nand_cs0_pin &nand_rb0_pin>;
+	status = "okay";
+
+	nand@0 {
+		reg = <0>;
+		allwinner,rb = <0>;
+		nand-ecc-mode = "hw";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			partition@0 {
+				label = "nand";
+				reg = <0x0 0x0 0x2 0x0>;
+				read-only;
+			};
+		};
+	};
+};
+
+&usb_otg {
+	dr_mode = "peripheral";
+};
