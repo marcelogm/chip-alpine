@@ -9,7 +9,18 @@ FIRMWARE_TAG=20260916
 mkdir -p build/dl build/src
 
 fetch() {
-	[ -f "build/dl/$2" ] || curl -fL -o "build/dl/$2" "$1"
+	[ -f "build/dl/$2" ] && return 0
+	curl -fL -o "build/dl/$2.part" "$1"
+	mv "build/dl/$2.part" "build/dl/$2"
+}
+
+extract() {
+	[ -d "build/src/$2" ] && return 0
+	rm -rf "build/src/.$2"
+	mkdir -p "build/src/.$2"
+	tar -C "build/src/.$2" -xf "build/dl/$1"
+	mv "build/src/.$2/$2" "build/src/$2"
+	rmdir "build/src/.$2"
 }
 
 fetch "https://cdn.kernel.org/pub/linux/kernel/v6.x/$LINUX.tar.xz" "$LINUX.tar.xz"
@@ -18,7 +29,7 @@ fetch "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.g
 
 (cd build/dl && sha256sum -c ../../sources/sha256sums)
 
-[ -d "build/src/$LINUX" ] || tar -C build/src -xf "build/dl/$LINUX.tar.xz"
-[ -d "build/src/$UBOOT" ] || tar -C build/src -xf "build/dl/$UBOOT.tar.bz2"
+extract "$LINUX.tar.xz" "$LINUX"
+extract "$UBOOT.tar.bz2" "$UBOOT"
 mkdir -p build/src/firmware/rtlwifi
 cp build/dl/rtl8723bs_nic.bin build/src/firmware/rtlwifi/
