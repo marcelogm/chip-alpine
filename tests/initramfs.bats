@@ -37,3 +37,7 @@ listing() {
 @test "usb gadget script is included" {
 	listing | grep -qx 'usr/sbin/chip-usb-gadget'
 }
+
+@test "nand stress tool is included" {
+	listing | grep -qx 'usr/sbin/chip-nand-stress'
+}
