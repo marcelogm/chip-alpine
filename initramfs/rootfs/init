@@ -7,10 +7,10 @@ mount -t sysfs sysfs /sys
 mount -t configfs configfs /sys/kernel/config
 mount -t tmpfs tmpfs /run
 mount -t tmpfs tmpfs /tmp
-modprobe r8723bs
-
 chip-usb-gadget /sys/kernel/config /sys/class/udc
 ip addr add 192.168.81.1/24 dev usb0
 ip link set usb0 up
+echo default-on > /sys/class/leds/chip:white:status/trigger
+modprobe r8723bs &
 
 exec /sbin/init

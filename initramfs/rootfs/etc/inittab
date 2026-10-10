@@ -1,5 +1,5 @@
 ::sysinit:/bin/hostname chip-alpine
-ttyGS0::respawn:/sbin/getty -n -l /bin/sh 115200 ttyGS0
+ttyGS0::respawn:/sbin/getty -L -n -l /bin/sh 115200 ttyGS0
 ttyS0::respawn:/sbin/getty -n -l /bin/sh 115200 ttyS0
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/bin/umount -a -r
