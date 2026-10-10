@@ -25,4 +25,4 @@ test:
 	$(RUN) bats tests
 
 fel-boot:
-	sudo dev/fel-boot-ram.sh
+	dev/fel-boot-ram.sh

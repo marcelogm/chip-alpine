@@ -17,9 +17,18 @@ make image
 
 Requires `sunxi-tools` on the host.
 
+Allow `sunxi-fel` to run without root (once):
+
+```sh
+sudo cp dev/99-chip-fel.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+```
+
+Your user must be in the `dialout` group, which also gives access to `/dev/ttyACM0`.
+
 1. Power off the C.H.I.P., connect the FEL pin (U14 pin 7) to a GND pin.
 2. Connect the micro-USB port to the host.
-3. `sudo dev/fel-boot-ram.sh`
+3. `make fel-boot`
 4. A serial console shows up as `/dev/ttyACM0` and a USB network interface with the board at `192.168.81.1`.
 
 Host notes:
@@ -33,3 +42,9 @@ Status signals while the FEL jumper is in:
 - LED blinking: kernel running.
 - LED solid: USB console ready.
 - Board back in FEL mode (`lsusb` shows `1f3a:efe8`): boot failed. Within seconds means U-Boot or FIT; about 10 s after the blinking started means kernel panic.
+
+Run a command on the board from the host and get its exit status:
+
+```sh
+dev/chip-sh 'cat /proc/mtd'
+```
