@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+configfs=${1:-/sys/kernel/config}
+udc_class=${2:-/sys/class/udc}
+g=$configfs/usb_gadget/chip
+
+mkdir -p "$g/strings/0x409"
+echo 0x1d6b > "$g/idVendor"
+echo 0x0104 > "$g/idProduct"
+echo chip-alpine > "$g/strings/0x409/manufacturer"
+echo chip-alpine > "$g/strings/0x409/product"
+
+mkdir -p "$g/functions/acm.usb0" "$g/functions/ncm.usb0" "$g/configs/c.1"
+ln -s "$g/functions/acm.usb0" "$g/configs/c.1/"
+ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/"
+
+ls "$udc_class" | head -n 1 > "$g/UDC"
