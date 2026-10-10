@@ -1,0 +1,55 @@
+/dts-v1/;
+
+/ {
+	description = "chip-alpine RAM boot";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			description = "Linux";
+			data = /incbin/("../build/out/zImage");
+			type = "kernel";
+			arch = "arm";
+			os = "linux";
+			compression = "none";
+			load = <0x40008000>;
+			entry = <0x40008000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+
+		fdt {
+			description = "sun5i-r8-chip-alpine";
+			data = /incbin/("../build/out/sun5i-r8-chip-alpine.dtb");
+			type = "flat_dt";
+			arch = "arm";
+			compression = "none";
+			hash {
+				algo = "sha256";
+			};
+		};
+
+		ramdisk {
+			description = "initramfs";
+			data = /incbin/("../build/out/initramfs.cpio.gz");
+			type = "ramdisk";
+			arch = "arm";
+			os = "linux";
+			compression = "none";
+			hash {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "ram";
+
+		ram {
+			kernel = "kernel";
+			fdt = "fdt";
+			ramdisk = "ramdisk";
+		};
+	};
+};
