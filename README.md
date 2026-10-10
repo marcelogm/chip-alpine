@@ -2,7 +2,7 @@
 
 Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., using mainline U-Boot and Linux.
 
-Status: phase 0 — booting entirely from RAM over FEL, nothing is written to the NAND.
+Status: phase 1 — boots from RAM over FEL; Linux writes UBI to the NAND in SLC mode.
 
 ## Build
 
@@ -48,3 +48,16 @@ Run a command on the board from the host and get its exit status:
 ```sh
 dev/chip-sh 'cat /proc/mtd'
 ```
+
+## NAND stress test (phase 1)
+
+Erases the UBI partition. Start with the board in FEL mode (jumper in place).
+
+```sh
+dev/nand-cycles.sh 1000
+dev/nand-powercut.sh 30
+```
+
+`nand-cycles.sh` runs unattended: each cycle writes 50 MiB, drops the page cache and verifies the data, logging ECC statistics.
+`nand-powercut.sh` asks you to cut and restore power with the hub port button while the board is writing, then checks that every file synced before the cut is intact.
+Logs go to `build/logs/`.
