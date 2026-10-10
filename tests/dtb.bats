@@ -18,3 +18,7 @@ NAND=/soc/nand-controller@1c03000
 @test "usb otg port is a peripheral" {
 	[ "$(fdtget -t s $DTB /soc/usb@1c13000 dr_mode)" = peripheral ]
 }
+
+@test "status led blinks while the kernel boots" {
+	[ "$(fdtget -t s $DTB /leds/led-0 linux,default-trigger)" = heartbeat ]
+}

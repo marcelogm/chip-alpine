@@ -4,6 +4,10 @@
 	model = "NextThing C.H.I.P. (chip-alpine)";
 };
 
+&{/leds/led-0} {
+	linux,default-trigger = "heartbeat";
+};
+
 &nfc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&nand_pins &nand_cs0_pin &nand_rb0_pin>;
