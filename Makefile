@@ -1,7 +1,7 @@
 IMAGE := chip-alpine-build
 RUN := podman run --rm -v $(CURDIR):/work:Z -w /work $(IMAGE)
 
-.PHONY: container sources uboot kernel test
+.PHONY: container sources uboot kernel initramfs test
 
 container:
 	podman build -t $(IMAGE) -f Containerfile .
@@ -14,6 +14,9 @@ uboot: sources
 
 kernel: sources
 	$(RUN) kernel/build.sh
+
+initramfs: kernel
+	$(RUN) initramfs/build.sh
 
 test:
 	$(RUN) bats tests
