@@ -19,6 +19,7 @@ RUN apk add --no-cache \
 	gcc-arm-none-eabi \
 	gnutls-dev \
 	gzip \
+	kmod \
 	linux-headers \
 	ncurses-dev \
 	openssl-dev \
