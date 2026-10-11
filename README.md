@@ -81,7 +81,12 @@ dev/flash-nand.sh
 
 Linux, booted from RAM, writes the FIT to `boot-a` and `boot-b` and checks the readback; then U-Boot, loaded over FEL, writes the SPL (twice) and itself.
 Power off, remove the jumper and power on: U-Boot boots `boot-a`, falls back to `boot-b`, and opens a USB serial console if neither boots.
+U-Boot falls back only when reading or verifying the FIT fails; a kernel that panics reboots into the same slot (there is no boot counter yet).
 The kernel command line says which slot booted: `chip.slot=a`, `b` or `ram`.
+
+`dev/fel-boot-nand.sh`: with the jumper still in, loads U-Boot over FEL with no script, so it boots the NAND slots exactly as an autonomous boot would. Useful to test the slots before writing the SPL.
+
+`dev/fel-flash-uboot.sh` only verifies `u-boot.img`; a bad SPL shows up as `1f3a:efe8` on the first boot without the jumper.
 
 Boot tests, with the jumper removed and Linux up:
 
