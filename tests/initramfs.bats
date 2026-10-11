@@ -39,6 +39,10 @@ listing() {
 	listing | grep -qE '(^|/)ubiupdatevol$'
 }
 
+@test "data writer is included" {
+	listing | grep -qx 'usr/sbin/chip-data-write'
+}
+
 @test "ubi formatter and its tools are included" {
 	listing | grep -qx 'usr/sbin/chip-ubi-format'
 	listing | grep -qE '(^|/)ubiformat$'

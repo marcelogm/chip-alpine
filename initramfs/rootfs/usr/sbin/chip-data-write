@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	echo "usage: chip-data-write TARBALL" >&2
+	exit 2
+}
+
+[ $# -eq 1 ] || usage
+[ -f "$1" ] || usage
+tarball=$1
+
+[ -e /dev/ubi0 ] || ubiattach -p "/dev/$(awk -F: '/"UBI"/ { print $1 }' /proc/mtd)" > /dev/null
+
+mkdir -p /media/data
+mounted=
+if ! grep -q ' /media/data ' /proc/mounts; then
+	mount -t ubifs ubi0:data /media/data
+	mounted=yes
+fi
+
+tar -xzf "$tarball" -C /media/data
+sync
+files=$(tar -tzf "$tarball" | wc -l)
+if [ -n "$mounted" ]; then
+	umount /media/data
+fi
+echo "data: wrote $files files"
