@@ -55,7 +55,7 @@ Erases the UBI partition. Start with the board in FEL mode (jumper in place).
 
 ```sh
 dev/nand-cycles.sh 1000
-dev/nand-powercut.sh 30
+dev/nand-powercut.sh 10
 ```
 
 `nand-cycles.sh` runs unattended: each cycle writes 50 MiB, drops the page cache and verifies the data, logging ECC statistics.
