@@ -70,13 +70,19 @@ Linux sees the SPL and U-Boot partitions read-only.
 
 ## First boot
 
-The board boots a diskless Alpine Linux in RAM, with OpenRC, from the packages and configuration in the `data` volume. Log in over the USB network with the key given at flash time:
+The board boots a diskless Alpine Linux in RAM, with OpenRC, from the packages and configuration in the `data` volume. Every boot installs the packages to RAM, so the console and SSH take about a minute to appear. Log in over the USB network with the key given at flash time:
 
 ```sh
 ssh root@192.168.81.1
 ```
 
 or at the Wi-Fi IP if you set a network. SSH accepts keys only. The serial console on `/dev/ttyACM0` logs in as `root` without a password.
+
+The SSH host keys are generated on every boot until they are saved. After the first login, run once:
+
+```sh
+lbu commit
+```
 
 ## Keeping changes
 
@@ -102,7 +108,7 @@ An ext4 stick in the USB-A port can hold the data of your services. Find its UUI
 
 ```sh
 mkdir -p /media/usb
-echo 'UUID=<uuid> /media/usb ext4 defaults,nofail 0 2' >> /etc/fstab
+echo 'UUID=<uuid> /media/usb ext4 defaults,nofail 0 0' >> /etc/fstab
 mount /media/usb
 lbu commit
 ```
