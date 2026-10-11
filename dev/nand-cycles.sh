@@ -9,7 +9,7 @@ mkdir -p build/logs
 dev/fel-boot-ram.sh
 dev/wait-for-console.sh
 dev/chip-sh 'chip-nand-stress format' 600
-dev/chip-sh "chip-nand-stress cycles $cycles > /tmp/cycles.log 2>&1 &"
+dev/chip-sh "(chip-nand-stress cycles $cycles > /tmp/cycles.log 2>&1 &)"
 
 while :; do
 	sleep 60
