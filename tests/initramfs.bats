@@ -59,3 +59,8 @@ listing() {
 	listing | grep -qx 'usr/sbin/chip-diskless-root'
 	listing | grep -qE '(^|/)sbin/apk$'
 }
+
+@test "init keeps the root and /run of the diskless system closed to other users" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -qx 'mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run'
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'mount -t tmpfs -o mode=0755 tmpfs /sysroot'
+}

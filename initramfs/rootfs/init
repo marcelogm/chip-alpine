@@ -5,7 +5,7 @@ mount -t devtmpfs devtmpfs /dev
 exec 0</dev/console 1>/dev/console 2>&1
 mount -t sysfs sysfs /sys
 mount -t configfs configfs /sys/kernel/config
-mount -t tmpfs tmpfs /run
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs tmpfs /tmp
 chip-usb-gadget /sys/kernel/config /sys/class/udc
 ip addr add 192.168.81.1/24 dev usb0
@@ -25,7 +25,7 @@ mtd=$(awk -F: '/"UBI"/ { print $1 }' /proc/mtd)
 if { [ -e /dev/ubi0 ] || ubiattach -p "/dev/$mtd" > /dev/null; } &&
 	mkdir -p /media/data /sysroot &&
 	mount -t ubifs ubi0:data /media/data &&
-	mount -t tmpfs tmpfs /sysroot &&
+	mount -t tmpfs -o mode=0755 tmpfs /sysroot &&
 	chip-diskless-root /media/data /sysroot &&
 	chroot /sysroot /bin/sh -c '[ -x /sbin/init ]'; then
 	mkdir -p /sysroot/media/data
