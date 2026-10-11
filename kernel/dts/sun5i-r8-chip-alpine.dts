@@ -17,6 +17,8 @@
 		reg = <0>;
 		allwinner,rb = <0>;
 		nand-ecc-mode = "hw";
+		nand-ecc-strength = <40>;
+		nand-ecc-step-size = <1024>;
 
 		partitions {
 			compatible = "fixed-partitions";
@@ -44,13 +46,11 @@
 			partition@c00000 {
 				label = "boot-a";
 				reg = <0x0 0xc00000 0x0 0x2000000>;
-				read-only;
 			};
 
 			partition@2c00000 {
 				label = "boot-b";
 				reg = <0x0 0x2c00000 0x0 0x2000000>;
-				read-only;
 			};
 
 			partition@4c00000 {

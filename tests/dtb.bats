@@ -15,12 +15,19 @@ PARTS=$NAND/nand@0/partitions
 	[ "$(fdtget -t s $DTB $PARTS/partition@4c00000 label)" = UBI ]
 }
 
-@test "only the UBI partition is writable" {
-	for p in partition@0 partition@400000 partition@800000 partition@c00000 partition@2c00000; do
+@test "linux writes only the boot slots and UBI" {
+	for p in partition@0 partition@400000 partition@800000; do
 		fdtget $DTB $PARTS/$p read-only
 	done
-	run fdtget $DTB $PARTS/partition@4c00000 read-only
-	[ "$status" -ne 0 ]
+	for p in partition@c00000 partition@2c00000 partition@4c00000; do
+		run fdtget $DTB $PARTS/$p read-only
+		[ "$status" -ne 0 ]
+	done
+}
+
+@test "linux uses the same ecc as u-boot on the nand" {
+	[ "$(fdtget $DTB $NAND/nand@0 nand-ecc-strength)" = 40 ]
+	[ "$(fdtget $DTB $NAND/nand@0 nand-ecc-step-size)" = 1024 ]
 }
 
 @test "UBI partition runs the mlc nand in slc mode" {
