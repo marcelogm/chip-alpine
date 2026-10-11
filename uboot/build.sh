@@ -7,6 +7,9 @@ OUT=$PWD/build/uboot
 UMAKE="make -C $SRC O=$OUT CROSS_COMPILE=arm-none-eabi-"
 
 mkdir -p "$OUT" build/out
+for p in uboot/patches/*.patch; do
+	patch -d "$SRC" -p1 -R -s -f --dry-run < "$p" > /dev/null 2>&1 || patch -d "$SRC" -p1 -s -f < "$p"
+done
 $UMAKE CHIP_defconfig
 "$SRC/scripts/kconfig/merge_config.sh" -m -O "$OUT" "$OUT/.config" uboot/fel-ram.config
 $UMAKE olddefconfig
