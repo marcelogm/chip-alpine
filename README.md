@@ -33,7 +33,12 @@ Your user must be in the `dialout` group, which also gives access to `/dev/ttyAC
 
 Host notes:
 
-- The board runs no DHCP server: give the host's new USB network interface `192.168.81.2/24`, e.g. `sudo ip addr add 192.168.81.2/24 dev <iface>`.
+- The board runs no DHCP server and its USB network interface is recreated on every boot. Give the host a persistent address, keyed on the board's fixed MAC (once):
+
+  ```sh
+  nmcli con add type ethernet con-name chip-usb ethernet.mac-address 02:c4:1b:00:00:01 ipv4.method manual ipv4.addresses 192.168.81.2/24 ipv6.method disabled
+  ```
+
 - Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
 
 Where the board is, from `lsusb`:
@@ -68,7 +73,7 @@ Logs go to `build/logs/`.
 
 ## Boot from the NAND (phase 2)
 
-Overwrites the boot slots, the SPL and U-Boot. Start with the board in FEL mode (jumper in place) and the host's USB network interface at `192.168.81.2/24`.
+Overwrites the boot slots, the SPL and U-Boot. Start with the board in FEL mode (jumper in place) and the `chip-usb` NetworkManager profile in place (see the host notes above).
 
 ```sh
 dev/flash-nand.sh
