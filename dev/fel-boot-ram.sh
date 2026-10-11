@@ -2,16 +2,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-tries=0
-until sunxi-fel -l | grep -q .; do
-	tries=$((tries + 1))
-	if [ "$tries" -ge 30 ]; then
-		echo "no C.H.I.P. in FEL mode found: jumper FEL to GND and reconnect the micro-USB" >&2
-		exit 1
-	fi
-	sleep 1
-done
-
-sunxi-fel -v -p \
+exec dev/fel-run.sh \
 	uboot build/out/u-boot-sunxi-with-spl.bin \
-	write 0x42000000 build/out/chip-ram.itb
+	write 0x42000000 build/out/chip.itb \
+	write 0x44000000 build/out/boot-ram.scr
