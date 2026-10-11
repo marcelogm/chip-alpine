@@ -14,4 +14,3 @@ apk add --root "$ROOT" --arch armv7 --initdb --no-scripts \
 	--repository "$MAIN" --repository "$COMMUNITY" \
 	$(cat data/world)
 rm -rf "$ROOT"
-data/apkovl.sh build/out/data
