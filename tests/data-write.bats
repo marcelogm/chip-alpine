@@ -38,3 +38,14 @@ fake_board() {
 	[ "$(stat -c %u:%g /media/data/cache/alpine-base.apk)" = 0:0 ]
 	[ "$(stat -c %u:%g /media/data/cache)" = 0:0 ]
 }
+
+@test "data write replaces the overlay already on the data volume" {
+	fake_board
+	touch /media/data/old.apkovl.tar.gz
+	touch "$SRC/new.apkovl.tar.gz"
+	tar -czf "$TARBALL" -C "$SRC" .
+	PATH="$BIN:$PATH" run $WRITE "$TARBALL"
+	[ "$status" -eq 0 ]
+	[ ! -e /media/data/old.apkovl.tar.gz ]
+	[ -e /media/data/new.apkovl.tar.gz ]
+}

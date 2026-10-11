@@ -19,6 +19,7 @@ if ! grep -q ' /media/data ' /proc/mounts; then
 	mounted=yes
 fi
 
+rm -f /media/data/*.apkovl.tar.gz
 tar -xzof "$tarball" -C /media/data
 sync
 files=$(tar -tzf "$tarball" | wc -l)
