@@ -51,5 +51,5 @@ uboot_env() {
 }
 
 @test "spl turns on the cortex-a8 l2 cache, which the kernel needs and the boot rom leaves off" {
-	grep -q 'sunxi_enable_cortex_a8_l2_cache' build/src/u-boot-2026.07/arch/arm/mach-sunxi/board.c
+	grep -q 'actlr |= BIT(1)' build/src/u-boot-2026.07/arch/arm/mach-sunxi/board.c
 }
