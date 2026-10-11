@@ -1,100 +1,117 @@
 # chip-alpine
 
-Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., running mainline Linux. The boot loader is U-Boot 2022.01 with the NAND patches from NextThingCo's [x-chip-uboot](https://github.com/NextThingCo/x-chip-uboot) (SLC emulation on the MLC NAND and DMA reads in the sun5i SPL), kept in `uboot/patches/`.
+Alpine Linux for the internal NAND of the Next Thing Co. C.H.I.P., on mainline Linux. The system is diskless: every boot installs it into RAM from a package cache and a saved configuration on the NAND, so it boots the same way every time and you keep changes with `lbu commit`. The boot loader is U-Boot 2022.01 with the NAND patches from NextThingCo's [x-chip-uboot](https://github.com/NextThingCo/x-chip-uboot) (SLC emulation on the MLC NAND and DMA reads in the SPL).
 
-## Build
+## What you need
 
-Requires podman.
+- A C.H.I.P.
+- A micro-USB data cable to a Linux PC.
+- A jumper wire, to put the board in FEL mode.
+- A good power supply. The board can brown out on a weak USB hub port once Wi-Fi is up.
+- `sunxi-tools` (for `sunxi-fel`) and `python3` on the PC.
+
+## Flash
+
+### 1. Download
+
+Download `chip-alpine-<version>.tar.gz` and `chip-alpine-<version>.tar.gz.sha256` from the [latest release](https://github.com/marcelogm/chip-alpine/releases/latest), then:
 
 ```sh
-make container
-make data
-make image
+sha256sum -c chip-alpine-<version>.tar.gz.sha256
+tar -xzf chip-alpine-<version>.tar.gz
+cd chip-alpine-<version>
 ```
 
-The outputs are in `build/out/`. `make data` downloads the packages of the system to `build/out/data/cache`; run it again only to refresh them.
+Run the commands below from this directory.
 
-## Host setup
+### 2. Set up the PC (once)
 
-Requires `sunxi-tools`.
-
-Allow `sunxi-fel` to run without root (once):
+Let `sunxi-fel` reach the board without root:
 
 ```sh
 sudo cp flash/99-chip-fel.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
-Your user must be in the `dialout` group, which also gives access to `/dev/ttyACM0`.
+Your user must be in the `dialout` group, which also gives access to the board's console on `/dev/ttyACM0`:
 
-The board runs no DHCP server and its USB network interface is recreated on every boot. Give the host a persistent address, keyed on the board's fixed MAC (once):
+```sh
+sudo usermod -aG dialout "$USER"
+```
+
+Log out and back in for it to apply.
+
+The board is `192.168.81.1` on its USB network and runs no DHCP server. Give the PC a fixed address there, keyed on the board's fixed MAC:
 
 ```sh
 nmcli con add type ethernet con-name chip-usb ethernet.mac-address 02:c4:1b:00:00:01 ipv4.method manual ipv4.addresses 192.168.81.2/24 ipv6.method disabled
 ```
 
-Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
+ModemManager probes `/dev/ttyACM*` and may type AT commands into the board's shell. Stop it while flashing:
 
-## Flash
+```sh
+sudo systemctl stop ModemManager
+```
 
-This erases the whole NAND. Run `make data` and `make image` first.
-
-Save the settings of the board once:
+### 3. Choose the settings
 
 ```sh
 flash/flash-setup.sh
 ```
 
-It asks for the hostname (default `chip-alpine`), the public key file installed for root (default `~/.ssh/chip_ed25519.pub`), and a Wi-Fi network and its password (optional), and writes them to `~/.config/chip-alpine/flash.conf`, readable only by you.
+It asks for the hostname (default `chip-alpine`), the SSH public key to authorize for root, and a Wi-Fi network and its password (optional), and saves them to `~/.config/chip-alpine/flash.conf`, readable only by you.
 
-1. Power off the C.H.I.P. and connect the FEL pin (U14 pin 7) to a GND pin.
-2. Connect the micro-USB port to the host. Use only this port.
+SSH accepts keys only. If you have no key for the board, create one first; `flash/flash-setup.sh` then offers it as the default:
+
+```sh
+ssh-keygen -t ed25519 -f ~/.ssh/chip_ed25519
+```
+
+### 4. Flash the NAND
+
+This erases the whole NAND.
+
+1. Power off the board and connect the FEL pin (U14 pin 7) to a GND pin with the jumper wire.
+2. Connect the board's micro-USB port to the PC.
 3. Run:
 
 ```sh
 flash/flash-nand.sh
 ```
 
-`flash/flash-nand.sh --print-settings` shows the settings it will use without touching the board. Options override the saved settings: `--hostname NAME`, `--ssh-key FILE`, `--wifi-ssid SSID --wifi-psk PSK`, and `--config FILE` reads another settings file.
+It boots Linux from RAM over USB, writes the system to the NAND, then writes U-Boot, and ends with `done`.
 
-It boots Linux from RAM over FEL, formats the UBI partition, writes the FIT image to the `boot-a` and `boot-b` volumes and the system data (package cache and configuration) to the `data` volume. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
+`flash/flash-nand.sh --print-settings` shows the settings it will use without touching the board. `--hostname NAME`, `--ssh-key FILE`, `--wifi-ssid SSID --wifi-psk PSK` override the saved settings, and `--config FILE` reads another settings file.
 
-4. Remove the jumper and power-cycle the board.
+### 5. Boot
 
-## How it boots
+Remove the jumper and power-cycle the board.
 
-The SPL loads U-Boot, and U-Boot boots the FIT image in the UBI volume `boot-a`. If `boot-a` cannot be read or fails the FIT hash check, it boots `boot-b`. If neither boots, U-Boot stops at its prompt. A kernel that panics reboots into the same slot.
+### 6. Log in
 
-The kernel command line says which slot booted: `chip.slot=a` or `chip.slot=b` (`ram` when booted over FEL).
-
-| NAND | Size | Content |
-|---|---|---|
-| `spl` at 0x0 | 4 MiB | SPL with ECC, raw |
-| `spl-backup` at 0x400000 | 4 MiB | same |
-| `uboot` at 0x800000 | 4 MiB | `u-boot-dtb.bin`, MLC with ECC |
-| `UBI` at 0xc00000 | rest, SLC mode | UBI volumes `boot-a` and `boot-b`, 16 MiB each, holding the FIT |
-
-Linux sees the SPL and U-Boot partitions read-only.
-
-## First boot
-
-The board boots a diskless Alpine Linux in RAM, with OpenRC, from the packages and configuration in the `data` volume. Every boot installs the packages to RAM, so the console and SSH take about a minute to appear. Log in over the USB network with the key given at flash time:
+The first boot takes about a minute. Log in over Wi-Fi, at the address your router gave the board:
 
 ```sh
-ssh root@192.168.81.1
+ssh -i ~/.ssh/chip_ed25519 root@<wifi ip>
 ```
 
-or at the Wi-Fi IP if you set a network. SSH accepts keys only. The serial console on `/dev/ttyACM0` logs in as `root` without a password.
+or over the USB cable:
 
-The SSH host keys are generated on every boot until they are saved. After the first login, run once:
+```sh
+ssh -i ~/.ssh/chip_ed25519 root@192.168.81.1
+```
+
+The console on `/dev/ttyACM0` (`screen /dev/ttyACM0 115200`) logs in as `root` without a password.
+
+The SSH host keys change on every boot until you save them. After the first login, run once:
 
 ```sh
 lbu commit
 ```
 
-## Keeping changes
+## Using it
 
-The root filesystem is in RAM, so changes are lost on reboot unless saved. `lbu commit` saves the configuration to `/media/data`; packages live in `/media/data/cache` and are installed again on every boot without network.
+The root filesystem lives in RAM: changes are lost on reboot unless you save them with `lbu commit`, which writes the configuration to `/media/data` on the NAND. Packages are kept in `/media/data/cache` and installed again on every boot, without network.
 
 Add a package:
 
@@ -108,9 +125,7 @@ Upgrade the system:
 apk -U upgrade && apk cache sync && lbu commit
 ```
 
-If a package is missing from the cache, the board still boots with the packages that are there.
-
-## USB stick
+### USB stick
 
 An ext4 stick in the USB-A port can hold the data of your services. Find its UUID with `blkid`, then:
 
@@ -121,32 +136,27 @@ mount /media/usb
 lbu commit
 ```
 
-## Console
+### Boot slots
 
-When Linux is up, the board shows a serial console on `/dev/ttyACM0` (a root shell) and a USB network interface with the board at `192.168.81.1`.
+U-Boot boots the system image in the `boot-a` volume and falls back to `boot-b` when `boot-a` cannot be read or fails its hash check.
+`chip-boot-write boot-a IMAGE` on the board writes a new image to one slot and checks it, so the other slot stays bootable.
 
-Run a command on the board from the host and get its exit status:
+### Rescue
 
-```sh
-flash/chip-sh 'cat /proc/mtd'
-```
+With the FEL jumper in place and the micro-USB connected, `flash/fel-boot-ram.sh` boots Linux from RAM without touching the NAND, with a root shell on `/dev/ttyACM0`.
 
-## Status from lsusb
+## Build from source
 
-| `lsusb` | Board |
-|---|---|
-| `1f3a:efe8` | FEL mode: jumper in place, or no valid SPL on the NAND |
-| `1d6b:0104` | Linux is up |
-| nothing | stuck before Linux, e.g. neither boot volume boots |
-
-## Update the boot image
-
-With Linux up, copy a new FIT to the board and write it to a slot:
+Requires podman.
 
 ```sh
-flash/chip-put build/out/chip.itb /tmp/chip.itb
-flash/chip-sh 'chip-boot-write boot-b /tmp/chip.itb' 600
-flash/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 600
+make container data image
+make test
+make release
 ```
 
-`chip-boot-write` checks the readback. Writing one slot at a time keeps the other bootable.
+The build outputs are in `build/out/`, and `flash/flash-nand.sh` flashes them from the source tree as well. `make release` bundles them in `build/release/chip-alpine-<version>.tar.gz`.
+
+## License
+
+GPL-2.0, see `LICENSE`.
