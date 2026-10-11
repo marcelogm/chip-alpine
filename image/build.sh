@@ -3,21 +3,20 @@ set -eu
 cd "$(dirname "$0")/.."
 
 OUT=build/out
-PAGE_WITH_OOB=$((0x4000 + 0x500))
+UBOOT_MAX=$((0x100000))
 
 mkimage -f image/chip.its $OUT/chip.itb
 mkimage -A arm -T script -C none -d image/boot-ram.cmd $OUT/boot-ram.scr
 
-spl_size=$(stat -c %s $OUT/sunxi-spl-with-ecc.bin)
-spl_pages=$(printf '0x%x' $(( (spl_size + PAGE_WITH_OOB - 1) / PAGE_WITH_OOB )))
-uboot_size=$(printf '0x%x' "$(stat -c %s $OUT/u-boot.img)")
+if [ "$(stat -c %s $OUT/u-boot.bin)" -ge "$UBOOT_MAX" ]; then
+	echo "u-boot.bin does not fit in the 1 MiB before the fit in a boot slot" >&2
+	exit 1
+fi
+cp $OUT/u-boot.bin $OUT/payload.bin
+truncate -s 1M $OUT/payload.bin
+cat $OUT/chip.itb >> $OUT/payload.bin
 
-cat > $OUT/flash-uboot.cmd <<EOT
-nand erase 0x0 0xc00000
-nand write.raw.noverify 0x44100000 0x0 $spl_pages
-nand write.raw.noverify 0x44100000 0x400000 $spl_pages
-nand write 0x44200000 0x800000 0x100000
-nand read 0x45000000 0x800000 0x100000
-if cmp.b 0x44200000 0x45000000 $uboot_size; then reset; fi
-EOT
-mkimage -A arm -T script -C none -d $OUT/flash-uboot.cmd $OUT/flash-uboot.scr
+for slot in boot-a boot-b; do
+	mkimage -A arm -O u-boot -T firmware -C none -a 0x4a000000 -e 0x4a000000 -n $slot \
+		-d $OUT/payload.bin $OUT/$slot.img
+done

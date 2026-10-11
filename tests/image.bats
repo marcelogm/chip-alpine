@@ -1,6 +1,4 @@
 ITB=build/out/chip.itb
-FLASH=build/out/flash-uboot.cmd
-PAGE_WITH_OOB=$((0x4000 + 0x500))
 
 @test "fit carries the kernel" {
 	dumpimage -l $ITB | grep -q 'Type:.*Kernel Image'
@@ -14,7 +12,7 @@ PAGE_WITH_OOB=$((0x4000 + 0x500))
 	dumpimage -l $ITB | grep -q 'Type:.*RAMDisk Image'
 }
 
-@test "fit fits in a 32 MiB boot slot and below the scripts at 0x44000000" {
+@test "fit fits below the boot script sunxi-fel writes at 0x44000000" {
 	[ "$(stat -c %s $ITB)" -lt $((0x2000000)) ]
 }
 
@@ -24,19 +22,22 @@ PAGE_WITH_OOB=$((0x4000 + 0x500))
 	grep -qx 'bootm 0x42000000' image/boot-ram.cmd
 }
 
-@test "flash script writes the spl and its backup raw, with ecc already in the image" {
-	pages=$(( ($(stat -c %s build/out/sunxi-spl-with-ecc.bin) + PAGE_WITH_OOB - 1) / PAGE_WITH_OOB ))
-	grep -qx "nand write.raw.noverify 0x44100000 0x0 $(printf '0x%x' $pages)" $FLASH
-	grep -qx "nand write.raw.noverify 0x44100000 0x400000 $(printf '0x%x' $pages)" $FLASH
+@test "slot payloads are u-boot firmware images the spl loads at 0x4a000000" {
+	for slot in boot-a boot-b; do
+		dumpimage -l build/out/$slot.img > "$BATS_TEST_TMPDIR/$slot"
+		grep -qx "Image Name:   $slot" "$BATS_TEST_TMPDIR/$slot"
+		grep -q 'Image Type:   ARM U-Boot Firmware (uncompressed)' "$BATS_TEST_TMPDIR/$slot"
+		grep -qx 'Load Address: 4a000000' "$BATS_TEST_TMPDIR/$slot"
+		grep -qx 'Entry Point:  4a000000' "$BATS_TEST_TMPDIR/$slot"
+	done
 }
 
-@test "flash script writes u-boot where the spl looks for it" {
-	grep -qx 'nand write 0x44200000 0x800000 0x100000' $FLASH
+@test "fit sits 1 MiB into the payload, right after u-boot" {
+	cmp -n "$(stat -c %s $ITB)" $ITB build/out/boot-a.img 0 $((64 + 0x100000))
+	cmp -n "$(stat -c %s $ITB)" $ITB build/out/boot-b.img 0 $((64 + 0x100000))
 }
 
-@test "flash script resets only when u-boot reads back intact" {
-	size=$(printf '0x%x' "$(stat -c %s build/out/u-boot.img)")
-	grep -qx "if cmp.b 0x44200000 0x45000000 $size; then reset; fi" $FLASH
-	[ "$(tail -n 1 $FLASH)" = "if cmp.b 0x44200000 0x45000000 $size; then reset; fi" ]
-	dumpimage -l build/out/flash-uboot.scr | grep -q 'Script'
+@test "payload fits in a 32 MiB boot slot" {
+	[ "$(stat -c %s build/out/boot-a.img)" -le $((0x2000000)) ]
+	[ "$(stat -c %s build/out/boot-b.img)" -le $((0x2000000)) ]
 }
