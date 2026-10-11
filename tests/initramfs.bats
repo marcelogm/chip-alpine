@@ -39,9 +39,32 @@ listing() {
 	listing | grep -qE '(^|/)ubiupdatevol$'
 }
 
+@test "data writer is included" {
+	listing | grep -qx 'usr/sbin/chip-data-write'
+}
+
 @test "ubi formatter and its tools are included" {
 	listing | grep -qx 'usr/sbin/chip-ubi-format'
 	listing | grep -qE '(^|/)ubiformat$'
 	listing | grep -qE '(^|/)ubidetach$'
 	listing | grep -qE '(^|/)ubimkvol$'
+}
+
+@test "init stays in the rescue shell when booted from ram" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'chip.slot=ram'
+}
+
+@test "init switches to the diskless system from the data volume" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'switch_root /sysroot /sbin/init'
+	listing | grep -qx 'usr/sbin/chip-diskless-root'
+	listing | grep -qE '(^|/)sbin/apk$'
+}
+
+@test "init keeps the root and /run of the diskless system closed to other users" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -qx 'mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run'
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'mount -t tmpfs -o mode=0755 tmpfs /sysroot'
+}
+
+@test "init leaves no tmpfs behind in the initramfs it switches away from" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -A1 -x '[[:space:]]*umount /tmp' | grep -q 'exec switch_root'
 }

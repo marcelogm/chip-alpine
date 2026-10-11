@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+
+usage() {
+	echo "usage: chip-diskless-root MEDIA SYSROOT" >&2
+	exit 2
+}
+
+[ $# -eq 2 ] || usage
+media=$1
+sysroot=$2
+tools=$(dirname "$0")
+
+set -- "$media"/*.apkovl.tar.gz
+if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+	echo "$media: needs exactly one *.apkovl.tar.gz" >&2
+	exit 1
+fi
+overlay=$1
+
+tar -xzf "$overlay" -C "$sysroot"
+packages=$(cat "$sysroot/etc/apk/world")
+install() {
+	apk add --root "$sysroot" --initdb --no-network --clean-protected \
+		--keys-dir /etc/apk/keys --cache-dir "$media/cache" \
+		--repositories-file "$sysroot/etc/apk/repositories" \
+		"$@" $packages
+}
+install || install --initramfs-diskless-boot
+
+mkdir -p "$sysroot/lib" "$sysroot/usr/sbin"
+for dir in /lib/modules /lib/firmware; do
+	if [ -d "$dir" ]; then
+		cp -a "$dir" "$sysroot/lib/"
+	fi
+done
+cp "$tools/chip-boot-write" "$tools/chip-ubi-format" "$sysroot/usr/sbin/"

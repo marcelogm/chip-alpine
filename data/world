@@ -1,0 +1,7 @@
+alpine-base
+chrony
+iw
+mtd-utils-ubi
+openssh
+wireless-regdb
+wpa_supplicant

@@ -19,3 +19,5 @@ for slot in boot-a boot-b; do
 	ubimkvol /dev/ubi0 -N "$slot" -s "$VOLUME_SIZE" -t dynamic > /dev/null
 	echo "$slot: created a $VOLUME_SIZE volume"
 done
+ubimkvol /dev/ubi0 -N data -m -t dynamic > /dev/null
+echo "data: created a volume with the remaining space"
