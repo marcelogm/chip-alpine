@@ -45,3 +45,13 @@ listing() {
 	listing | grep -qE '(^|/)ubidetach$'
 	listing | grep -qE '(^|/)ubimkvol$'
 }
+
+@test "init stays in the rescue shell when booted from ram" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'chip.slot=ram'
+}
+
+@test "init switches to the diskless system from the data volume" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'switch_root /sysroot /sbin/init'
+	listing | grep -qx 'usr/sbin/chip-diskless-root'
+	listing | grep -qE '(^|/)sbin/apk$'
+}

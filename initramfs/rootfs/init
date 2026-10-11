@@ -11,6 +11,32 @@ chip-usb-gadget /sys/kernel/config /sys/class/udc
 ip addr add 192.168.81.1/24 dev usb0
 ip link set usb0 up
 echo default-on > /sys/class/leds/chip:white:status/trigger
-modprobe r8723bs &
 
-exec /sbin/init
+rescue() {
+	modprobe r8723bs &
+	exec /sbin/init
+}
+
+case " $(cat /proc/cmdline) " in
+*" chip.slot=ram "*) rescue ;;
+esac
+
+mtd=$(awk -F: '/"UBI"/ { print $1 }' /proc/mtd)
+if { [ -e /dev/ubi0 ] || ubiattach -p "/dev/$mtd" > /dev/null; } &&
+	mkdir -p /media/data /sysroot &&
+	mount -t ubifs ubi0:data /media/data &&
+	mount -t tmpfs tmpfs /sysroot &&
+	chip-diskless-root /media/data /sysroot &&
+	chroot /sysroot /bin/sh -c '[ -x /sbin/init ]'; then
+	mkdir -p /sysroot/media/data
+	mount --move /media/data /sysroot/media/data
+	for fs in /proc /sys /dev /run; do
+		mkdir -p "/sysroot$fs"
+		mount --move "$fs" "/sysroot$fs"
+	done
+	exec switch_root /sysroot /sbin/init
+fi
+umount /sysroot 2>/dev/null
+umount /media/data 2>/dev/null
+echo "chip-alpine: diskless boot failed, staying in the rescue shell"
+rescue
