@@ -40,7 +40,7 @@ data/apkovl.sh "$tmp/apkovl" "$@"
 mkdir "$tmp/data"
 cp -R build/out/data/cache "$tmp/data/cache"
 cp "$tmp/apkovl"/*.apkovl.tar.gz "$tmp/data/"
-tar -czf "$tmp/data.tar.gz" -C "$tmp/data" .
+tar -czf "$tmp/data.tar.gz" --owner=0 --group=0 --numeric-owner -C "$tmp/data" .
 
 dev/fel-boot-ram.sh
 dev/wait-for-console.sh

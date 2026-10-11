@@ -19,7 +19,7 @@ if ! grep -q ' /media/data ' /proc/mounts; then
 	mounted=yes
 fi
 
-tar -xzf "$tarball" -C /media/data
+tar -xzof "$tarball" -C /media/data
 sync
 files=$(tar -tzf "$tarball" | wc -l)
 if [ -n "$mounted" ]; then
