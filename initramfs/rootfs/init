@@ -34,6 +34,7 @@ if { [ -e /dev/ubi0 ] || ubiattach -p "/dev/$mtd" > /dev/null; } &&
 		mkdir -p "/sysroot$fs"
 		mount --move "$fs" "/sysroot$fs"
 	done
+	umount /tmp
 	exec switch_root /sysroot /sbin/init
 fi
 umount /sysroot 2>/dev/null

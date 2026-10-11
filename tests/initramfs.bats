@@ -64,3 +64,7 @@ listing() {
 	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -qx 'mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run'
 	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -q 'mount -t tmpfs -o mode=0755 tmpfs /sysroot'
 }
+
+@test "init leaves no tmpfs behind in the initramfs it switches away from" {
+	gzip -dc $CPIO | cpio -i --to-stdout --quiet init | grep -A1 -x '[[:space:]]*umount /tmp' | grep -q 'exec switch_root'
+}
