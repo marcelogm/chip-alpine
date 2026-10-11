@@ -46,9 +46,8 @@ Where the board is, from `lsusb`:
 | `lsusb` | Board |
 |---|---|
 | `1f3a:efe8` | FEL mode: jumper in place, or no valid SPL on the NAND |
-| `1f3a:1010` | U-Boot rescue console on `/dev/ttyACM0`: no boot slot booted |
 | `1d6b:0104` | Linux is up |
-| nothing | stuck in the SPL or U-Boot |
+| nothing | stuck in the SPL or U-Boot, or neither boot slot loads |
 
 While the FEL jumper is in, a failed boot from RAM puts the board back in FEL mode.
 
@@ -73,20 +72,19 @@ Logs go to `build/logs/`.
 
 ## Boot from the NAND (phase 2)
 
-Overwrites the boot slots, the SPL and U-Boot. Start with the board in FEL mode (jumper in place) and the `chip-usb` NetworkManager profile in place (see the host notes above).
+Overwrites the boot slots and the SPL. Start with the board in FEL mode (jumper in place) and the `chip-usb` NetworkManager profile in place (see the host notes above).
 
 ```sh
 dev/flash-nand.sh
 ```
 
-Linux, booted from RAM, writes the FIT to `boot-a` and `boot-b` and checks the readback; then U-Boot, loaded over FEL, writes the SPL (twice) and itself.
-Power off, remove the jumper and power on: U-Boot boots `boot-a`, falls back to `boot-b`, and opens a USB serial console if neither boots.
-U-Boot falls back only when reading or verifying the FIT fails; a kernel that panics reboots into the same slot (there is no boot counter yet).
+Linux, booted from RAM, writes one payload (U-Boot followed by the FIT) to `boot-a` and another to `boot-b`, checking the readback, then the SPL to `spl` and `spl-backup`.
+It refuses a boot slot with bad blocks, since the SPL cannot skip them.
+The SPL is written without a readback check (raw reads of the MLC NAND have bitflips); a bad SPL shows up as `1f3a:efe8` on the first boot without the jumper.
+Power off, remove the jumper and power on: the SPL loads U-Boot and the FIT from `boot-a`, or from `boot-b` when `boot-a` cannot be read or fails its CRC, and U-Boot boots that FIT.
+U-Boot itself never touches the NAND.
+A kernel that panics reboots into the same slot (there is no boot counter yet).
 The kernel command line says which slot booted: `chip.slot=a`, `b` or `ram`.
-
-`dev/fel-boot-nand.sh`: with the jumper still in, loads U-Boot over FEL with no script, so it boots the NAND slots exactly as an autonomous boot would. Useful to test the slots before writing the SPL.
-
-`dev/fel-flash-uboot.sh` only verifies `u-boot.img`; a bad SPL shows up as `1f3a:efe8` on the first boot without the jumper.
 
 Boot tests, with the jumper removed and Linux up:
 
