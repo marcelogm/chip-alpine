@@ -25,6 +25,7 @@ RUN apk add --no-cache \
 	openssl-dev \
 	perl \
 	py3-elftools \
+	py3-libfdt \
 	py3-setuptools \
 	python3 \
 	python3-dev \

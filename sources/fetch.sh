@@ -3,7 +3,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 LINUX=linux-6.18.55
-UBOOT=u-boot-2026.07
+UBOOT=u-boot-2022.01
 FIRMWARE_TAG=20260916
 
 mkdir -p build/dl build/src
