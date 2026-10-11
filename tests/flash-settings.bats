@@ -1,7 +1,7 @@
 bats_require_minimum_version 1.5.0
 
-NAND=$PWD/dev/flash-nand.sh
-SETUP=$PWD/dev/flash-setup.sh
+NAND=$PWD/flash/flash-nand.sh
+SETUP=$PWD/flash/flash-setup.sh
 
 setup() {
 	export XDG_CONFIG_HOME=$(mktemp -d)

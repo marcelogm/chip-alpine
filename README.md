@@ -21,7 +21,7 @@ Requires `sunxi-tools`.
 Allow `sunxi-fel` to run without root (once):
 
 ```sh
-sudo cp dev/99-chip-fel.rules /etc/udev/rules.d/
+sudo cp flash/99-chip-fel.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
@@ -42,7 +42,7 @@ This erases the whole NAND. Run `make data` and `make image` first.
 Save the settings of the board once:
 
 ```sh
-dev/flash-setup.sh
+flash/flash-setup.sh
 ```
 
 It asks for the hostname (default `chip-alpine`), the public key file installed for root (default `~/.ssh/chip_ed25519.pub`), and a Wi-Fi network and its password (optional), and writes them to `~/.config/chip-alpine/flash.conf`, readable only by you.
@@ -52,10 +52,10 @@ It asks for the hostname (default `chip-alpine`), the public key file installed 
 3. Run:
 
 ```sh
-dev/flash-nand.sh
+flash/flash-nand.sh
 ```
 
-`dev/flash-nand.sh --print-settings` shows the settings it will use without touching the board. Options override the saved settings: `--hostname NAME`, `--ssh-key FILE`, `--wifi-ssid SSID --wifi-psk PSK`, and `--config FILE` reads another settings file.
+`flash/flash-nand.sh --print-settings` shows the settings it will use without touching the board. Options override the saved settings: `--hostname NAME`, `--ssh-key FILE`, `--wifi-ssid SSID --wifi-psk PSK`, and `--config FILE` reads another settings file.
 
 It boots Linux from RAM over FEL, formats the UBI partition, writes the FIT image to the `boot-a` and `boot-b` volumes and the system data (package cache and configuration) to the `data` volume. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
 
@@ -128,7 +128,7 @@ When Linux is up, the board shows a serial console on `/dev/ttyACM0` (a root she
 Run a command on the board from the host and get its exit status:
 
 ```sh
-dev/chip-sh 'cat /proc/mtd'
+flash/chip-sh 'cat /proc/mtd'
 ```
 
 ## Status from lsusb
@@ -144,9 +144,9 @@ dev/chip-sh 'cat /proc/mtd'
 With Linux up, copy a new FIT to the board and write it to a slot:
 
 ```sh
-dev/chip-put build/out/chip.itb /tmp/chip.itb
-dev/chip-sh 'chip-boot-write boot-b /tmp/chip.itb' 600
-dev/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 600
+flash/chip-put build/out/chip.itb /tmp/chip.itb
+flash/chip-sh 'chip-boot-write boot-b /tmp/chip.itb' 600
+flash/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 600
 ```
 
 `chip-boot-write` checks the readback. Writing one slot at a time keeps the other bootable.
