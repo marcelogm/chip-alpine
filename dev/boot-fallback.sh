@@ -21,12 +21,12 @@ expect_slot() {
 dev/chip-sh 'flash_erase -q /dev/$(grep "\"boot-a\"" /proc/mtd | cut -d: -f1) 0 0' 120
 expect_slot b "erased boot-a"
 
-cp build/out/chip.itb build/out/chip-corrupt.itb
-printf 'CORRUPT!' | dd of=build/out/chip-corrupt.itb bs=1 seek=$((0x100000)) conv=notrunc 2> /dev/null
-dev/chip-put build/out/chip-corrupt.itb /tmp/chip-corrupt.itb
-dev/chip-sh 'chip-boot-write /tmp/chip-corrupt.itb boot-a' 300
-expect_slot b "boot-a with a bad kernel hash"
+cp build/out/boot-a.img build/out/boot-a-corrupt.img
+printf 'CORRUPT!' | dd of=build/out/boot-a-corrupt.img bs=1 seek=$((0x200000)) conv=notrunc 2> /dev/null
+dev/chip-put build/out/boot-a-corrupt.img /tmp/boot-a-corrupt.img
+dev/chip-sh 'chip-boot-write boot-a /tmp/boot-a-corrupt.img' 300
+expect_slot b "boot-a with a bad payload crc"
 
-dev/chip-put build/out/chip.itb /tmp/chip.itb
-dev/chip-sh 'chip-boot-write /tmp/chip.itb boot-a' 300
+dev/chip-put build/out/boot-a.img /tmp/boot-a.img
+dev/chip-sh 'chip-boot-write boot-a /tmp/boot-a.img' 300
 expect_slot a "boot-a restored"
