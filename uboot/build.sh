@@ -8,7 +8,10 @@ UMAKE="make -C $SRC O=$OUT CROSS_COMPILE=arm-none-eabi- DTC=dtc"
 
 mkdir -p "$OUT" build/out
 for p in uboot/patches/*.patch; do
-	patch -d "$SRC" -p1 -R -s -f --dry-run < "$p" > /dev/null 2>&1 || patch -d "$SRC" -p1 -s -f < "$p"
+	applied=$SRC/.applied-$(basename "$p")
+	[ -f "$applied" ] && continue
+	patch -d "$SRC" -p1 -s -f < "$p"
+	touch "$applied"
 done
 $UMAKE CHIP_defconfig
 "$SRC/scripts/kconfig/merge_config.sh" -m -O "$OUT" "$OUT/.config" uboot/chip.config
