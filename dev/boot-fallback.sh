@@ -18,15 +18,18 @@ expect_slot() {
 	echo "$2: booted slot $1"
 }
 
-dev/chip-sh 'flash_erase -q /dev/$(grep "\"boot-a\"" /proc/mtd | cut -d: -f1) 0 0' 120
-expect_slot b "erased boot-a"
+if ! dev/chip-sh '[ -e /dev/ubi0 ] || ubiattach -p /dev/$(grep "\"UBI\"" /proc/mtd | cut -d: -f1) > /dev/null; ubiupdatevol -t /dev/$(grep -lx boot-a /sys/class/ubi/ubi0_*/name | cut -d/ -f5)' 60; then
+	echo "could not empty boot-a" >&2
+	exit 1
+fi
+expect_slot b "empty boot-a"
 
-cp build/out/boot-a.img build/out/boot-a-corrupt.img
-printf 'CORRUPT!' | dd of=build/out/boot-a-corrupt.img bs=1 seek=$((0x200000)) conv=notrunc 2> /dev/null
-dev/chip-put build/out/boot-a-corrupt.img /tmp/boot-a-corrupt.img
-dev/chip-sh 'chip-boot-write boot-a /tmp/boot-a-corrupt.img' 300
-expect_slot b "boot-a with a bad payload crc"
+cp build/out/chip.itb build/out/chip-corrupt.itb
+printf 'CORRUPT!' | dd of=build/out/chip-corrupt.itb bs=1 seek=$((0x100000)) conv=notrunc 2> /dev/null
+dev/chip-put build/out/chip-corrupt.itb /tmp/chip-corrupt.itb
+dev/chip-sh 'chip-boot-write boot-a /tmp/chip-corrupt.itb' 300
+expect_slot b "boot-a failing its fit hash"
 
-dev/chip-put build/out/boot-a.img /tmp/boot-a.img
-dev/chip-sh 'chip-boot-write boot-a /tmp/boot-a.img' 300
+dev/chip-put build/out/chip.itb /tmp/chip.itb
+dev/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 300
 expect_slot a "boot-a restored"
