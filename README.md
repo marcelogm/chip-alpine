@@ -79,10 +79,21 @@ or at the Wi-Fi IP if you set a network. SSH accepts keys only. The serial conso
 
 ## Keeping changes
 
-The root filesystem is in RAM, so changes are lost on reboot unless saved:
+The root filesystem is in RAM, so changes are lost on reboot unless saved. `lbu commit` saves the configuration to `/media/data`; packages live in `/media/data/cache` and are installed again on every boot without network.
 
-- `lbu commit` saves the configuration to `/media/data`.
-- `apk add PACKAGE` keeps the package in `/media/data/cache`; it is installed again on the next boot without network.
+Add a package:
+
+```sh
+apk add PACKAGE && apk cache sync && lbu commit
+```
+
+Upgrade the system:
+
+```sh
+apk -U upgrade && apk cache sync && lbu commit
+```
+
+If a package is missing from the cache, the board still boots with the packages that are there.
 
 ## USB stick
 

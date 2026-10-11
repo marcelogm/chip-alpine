@@ -55,6 +55,15 @@ setup() {
 	[ ! -e "$SYSROOT/usr/sbin/chip-boot-write" ]
 }
 
+@test "diskless root installs what the cache has when a package is missing from it" {
+	printf '#!/bin/sh\necho "$@" >> %s/apk-args\ncase " $* " in *" --initramfs-diskless-boot "*) exit 0 ;; esac\nexit 1\n' "$BIN" > "$BIN/apk"
+	PATH="$BIN:$PATH" run $ROOTER "$MEDIA" "$SYSROOT"
+	[ "$status" -eq 0 ]
+	[ "$(wc -l < "$BIN/apk-args")" -eq 2 ]
+	head -n 1 "$BIN/apk-args" | grep -vq -- --initramfs-diskless-boot
+	[ -x "$SYSROOT/usr/sbin/chip-boot-write" ]
+}
+
 @test "diskless root needs the data volume and the sysroot" {
 	run $ROOTER "$MEDIA"
 	[ "$status" -eq 2 ]
