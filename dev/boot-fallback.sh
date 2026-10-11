@@ -6,7 +6,10 @@ cd "$(dirname "$0")/.."
 expect_slot() {
 	old=$(boot_id)
 	dev/chip-sh 'reboot' 5 || true
-	wait_new_boot "$old"
+	if ! wait_new_boot "$old"; then
+		echo "$2: console did not come back" >&2
+		exit 1
+	fi
 	got=$(slot)
 	if [ "$got" != "$1" ]; then
 		echo "$2: booted slot '$got', expected '$1'" >&2
