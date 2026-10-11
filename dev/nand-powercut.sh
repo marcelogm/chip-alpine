@@ -21,7 +21,7 @@ dev/chip-sh 'chip-nand-stress format' 600 | tee "$log"
 
 i=1
 while [ "$i" -le "$cuts" ]; do
-	dev/chip-sh 'chip-nand-stress powercut-write > /dev/null 2>&1 &'
+	dev/chip-sh '(chip-nand-stress powercut-write > /dev/null 2>&1 &)'
 	sleep $(( $(od -An -N1 -tu1 /dev/urandom) % 26 + 5 ))
 	press "cut $i/$cuts: press the hub port button to CUT power"
 	press "press it again to RESTORE power"
