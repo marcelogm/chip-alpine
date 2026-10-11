@@ -1,0 +1,37 @@
+--- a/common/spl/spl_nand.c
++++ b/common/spl/spl_nand.c
+@@ -15,6 +15,7 @@
+ #include <nand.h>
+ #include <linux/libfdt_env.h>
+ #include <fdt.h>
++#include <u-boot/crc.h>
+ 
+ uint32_t __weak spl_nand_get_uboot_raw_page(void)
+ {
+@@ -124,6 +125,17 @@
+ }
+ #endif
+ 
++static bool spl_nand_image_intact(struct spl_image_info *spl_image)
++{
++#ifdef CONFIG_SPL_LEGACY_IMAGE_CRC_CHECK
++	if (spl_image->dcrc_length)
++		return crc32_wd(0, (unsigned char *)spl_image->dcrc_data,
++				spl_image->dcrc_length, CHUNKSZ_CRC32) ==
++		       spl_image->dcrc;
++#endif
++	return true;
++}
++
+ static int spl_nand_load_image(struct spl_image_info *spl_image,
+ 			       struct spl_boot_device *bootdev)
+ {
+@@ -158,7 +170,7 @@
+ 	err = spl_nand_load_element(spl_image, bootdev, spl_nand_get_uboot_raw_page());
+ #ifdef CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND
+ #if CONFIG_SYS_NAND_U_BOOT_OFFS != CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND
+-	if (err)
++	if (err || !spl_nand_image_intact(spl_image))
+ 		err = spl_nand_load_element(spl_image, bootdev,
+ 					    CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND);
+ #endif
