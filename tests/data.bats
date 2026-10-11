@@ -34,6 +34,11 @@ apkovl() {
 	apkovl | grep -q 'etc/apk/cache -> /media/data/cache'
 }
 
+@test "apkovl keeps root's ssh directory in lbu commits" {
+	out=$(mktemp -d); data/apkovl.sh "$out"
+	tar -xzOf "$out"/*.apkovl.tar.gz etc/apk/protected_paths.d/lbu.list | grep -qx '+root/.ssh'
+}
+
 @test "apkovl starts ssh and the network on boot" {
 	apkovl | grep -q 'etc/runlevels/default/sshd -> /etc/init.d/sshd'
 	apkovl | grep -q 'etc/runlevels/default/networking -> /etc/init.d/networking'
