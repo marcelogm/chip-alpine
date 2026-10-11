@@ -49,3 +49,7 @@ uboot_env() {
 @test "spl reads the boot slots the way linux writes them in slc mode" {
 	grep -q 'nand_physical_offset' build/src/u-boot-2026.07/drivers/mtd/nand/raw/sunxi_nand_spl.c
 }
+
+@test "spl turns on the cortex-a8 l2 cache, which the kernel needs and the boot rom leaves off" {
+	grep -q 'sunxi_enable_cortex_a8_l2_cache' build/src/u-boot-2026.07/arch/arm/mach-sunxi/board.c
+}

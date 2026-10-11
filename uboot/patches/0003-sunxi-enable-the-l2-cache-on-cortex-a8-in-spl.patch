@@ -1,0 +1,23 @@
+--- a/arch/arm/mach-sunxi/board.c
++++ b/arch/arm/mach-sunxi/board.c
+@@ -469,8 +469,20 @@
+ 	return result;
+ }
+ 
++static void sunxi_enable_cortex_a8_l2_cache(void)
++{
++	u32 actlr;
++
++	asm volatile("mrc p15, 0, %0, c1, c0, 1" : "=r"(actlr));
++	actlr |= BIT(1);
++	asm volatile("mcr p15, 0, %0, c1, c0, 1" : : "r"(actlr));
++}
++
+ void board_init_f(ulong dummy)
+ {
++	if (IS_ENABLED(CONFIG_MACH_SUN4I) || IS_ENABLED(CONFIG_MACH_SUN5I))
++		sunxi_enable_cortex_a8_l2_cache();
++
+ 	sunxi_sram_init();
+ 
+ 	/* Enable non-secure access to some peripherals */
