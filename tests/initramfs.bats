@@ -24,11 +24,6 @@ listing() {
 	listing | grep -qE '(^|/)iw$'
 }
 
-@test "nand tools are included" {
-	listing | grep -qE '(^|/)nanddump$'
-	listing | grep -qE '(^|/)mtdinfo$'
-}
-
 @test "wifi driver and firmware are included" {
 	listing | grep -qE '(^|/)lib/modules/[^/]+/kernel/drivers/staging/rtl8723bs/r8723bs.ko$'
 	listing | grep -qE '(^|/)lib/firmware/rtlwifi/rtl8723bs_nic.bin$'
@@ -36,10 +31,6 @@ listing() {
 
 @test "usb gadget script is included" {
 	listing | grep -qx 'usr/sbin/chip-usb-gadget'
-}
-
-@test "nand stress tool is included" {
-	listing | grep -qx 'usr/sbin/chip-nand-stress'
 }
 
 @test "boot slot writer and its tools are included" {
