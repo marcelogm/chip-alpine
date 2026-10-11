@@ -1,8 +1,6 @@
 # chip-alpine
 
-Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., using U-Boot 2022.01 with NextThingCo's NAND patches and mainline Linux.
-
-Status: phase 2 — boots on its own from the NAND, with A/B boot slots.
+Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., running mainline Linux. The boot loader is U-Boot 2022.01 with the NAND patches from NextThingCo's [x-chip-uboot](https://github.com/NextThingCo/x-chip-uboot) (SLC emulation on the MLC NAND and DMA reads in the sun5i SPL), kept in `uboot/patches/`.
 
 ## Build
 
@@ -13,9 +11,11 @@ make container
 make image
 ```
 
-## Boot from RAM (phase 0)
+The outputs are in `build/out/`.
 
-Requires `sunxi-tools` on the host.
+## Host setup
+
+Requires `sunxi-tools`.
 
 Allow `sunxi-fel` to run without root (once):
 
@@ -26,53 +26,35 @@ sudo udevadm control --reload
 
 Your user must be in the `dialout` group, which also gives access to `/dev/ttyACM0`.
 
-1. Power off the C.H.I.P., connect the FEL pin (U14 pin 7) to a GND pin.
-2. Connect the micro-USB port to the host.
-3. `make fel-boot` (loads the FIT, `build/out/chip.itb`, into RAM)
-4. A serial console shows up as `/dev/ttyACM0` and a USB network interface with the board at `192.168.81.1`.
-
-Host notes:
-
-- The board runs no DHCP server and its USB network interface is recreated on every boot. Give the host a persistent address, keyed on the board's fixed MAC (once):
-
-  ```sh
-  nmcli con add type ethernet con-name chip-usb ethernet.mac-address 02:c4:1b:00:00:01 ipv4.method manual ipv4.addresses 192.168.81.2/24 ipv6.method disabled
-  ```
-
-- Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
-
-Where the board is, from `lsusb`:
-
-| `lsusb` | Board |
-|---|---|
-| `1f3a:efe8` | FEL mode: jumper in place, or no valid SPL on the NAND |
-| `1d6b:0104` | Linux is up |
-| nothing | stuck in the SPL or U-Boot, e.g. neither boot volume boots |
-
-While the FEL jumper is in, a failed boot from RAM puts the board back in FEL mode.
-
-Run a command on the board from the host and get its exit status:
+The board runs no DHCP server and its USB network interface is recreated on every boot. Give the host a persistent address, keyed on the board's fixed MAC (once):
 
 ```sh
-dev/chip-sh 'cat /proc/mtd'
+nmcli con add type ethernet con-name chip-usb ethernet.mac-address 02:c4:1b:00:00:01 ipv4.method manual ipv4.addresses 192.168.81.2/24 ipv6.method disabled
 ```
 
-## NAND stress test (phase 1)
+Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
 
-Erases the UBI partition, boot volumes included: run `dev/flash-nand.sh` again afterwards to boot from the NAND. Start with the board in FEL mode (jumper in place).
+## Flash
+
+This erases the whole NAND.
+
+1. Power off the C.H.I.P. and connect the FEL pin (U14 pin 7) to a GND pin.
+2. Connect the micro-USB port to the host. Use only this port.
+3. Run:
 
 ```sh
-dev/nand-cycles.sh 1000
-dev/nand-powercut.sh 10
+dev/flash-nand.sh
 ```
 
-`nand-cycles.sh` runs unattended: each cycle writes 50 MiB, drops the page cache and verifies the data, logging ECC statistics.
-`nand-powercut.sh` asks you to cut and restore power with the hub port button while the board is writing, then checks that every file synced before the cut is intact.
-Logs go to `build/logs/`.
+It boots Linux from RAM over FEL, formats the UBI partition and writes the FIT image to the `boot-a` and `boot-b` volumes. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
 
-## Boot from the NAND (phase 2)
+4. Remove the jumper and power-cycle the board.
 
-The NAND boot chain is NextThingCo's, from [x-chip-uboot](https://github.com/NextThingCo/x-chip-uboot): U-Boot 2022.01 with their patches for SLC emulation on the MLC NAND and for the sun5i SPL's DMA reads, in `uboot/patches/`.
+## How it boots
+
+The SPL loads U-Boot, and U-Boot boots the FIT image in the UBI volume `boot-a`. If `boot-a` cannot be read or fails the FIT hash check, it boots `boot-b`. If neither boots, U-Boot stops at its prompt. A kernel that panics reboots into the same slot.
+
+The kernel command line says which slot booted: `chip.slot=a` or `chip.slot=b` (`ram` when booted over FEL).
 
 | NAND | Size | Content |
 |---|---|---|
@@ -83,27 +65,32 @@ The NAND boot chain is NextThingCo's, from [x-chip-uboot](https://github.com/Nex
 
 Linux sees the SPL and U-Boot partitions read-only.
 
-Overwrites the whole NAND. Start with the board in FEL mode (jumper in place) and the `chip-usb` NetworkManager profile in place (see the host notes above).
+## Console
+
+When Linux is up, the board shows a serial console on `/dev/ttyACM0` (a root shell) and a USB network interface with the board at `192.168.81.1`.
+
+Run a command on the board from the host and get its exit status:
 
 ```sh
-dev/flash-nand.sh
+dev/chip-sh 'cat /proc/mtd'
 ```
 
-Linux, booted from RAM, formats `UBI`, creates `boot-a` and `boot-b` and writes the FIT to both, checking the readback.
-The board then reboots into FEL, and U-Boot, loaded over FEL, writes the SPL twice and itself to the NAND and boots `boot-a` from UBI, which checks the whole chain.
-Power off, remove the jumper and power on: the SPL loads U-Boot, and U-Boot boots the FIT in `boot-a`, or the one in `boot-b` when `boot-a` cannot be read or fails its FIT hash check.
-When neither boots, U-Boot stops at its prompt.
-A kernel that panics reboots into the same slot (there is no boot counter yet).
-The kernel command line says which slot booted: `chip.slot=a`, `b` or `ram`.
+## Status from lsusb
 
-Boot tests, with the jumper removed and Linux up:
+| `lsusb` | Board |
+|---|---|
+| `1f3a:efe8` | FEL mode: jumper in place, or no valid SPL on the NAND |
+| `1d6b:0104` | Linux is up |
+| nothing | stuck before Linux, e.g. neither boot volume boots |
+
+## Update the boot image
+
+With Linux up, copy a new FIT to the board and write it to a slot:
 
 ```sh
-dev/boot-fallback.sh
-dev/boot-loop.sh 50
-dev/cold-boots.sh 5
+dev/chip-put build/out/chip.itb /tmp/chip.itb
+dev/chip-sh 'chip-boot-write boot-b /tmp/chip.itb' 600
+dev/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 600
 ```
 
-`boot-fallback.sh` empties `boot-a`, then writes a FIT with a corrupt kernel to it, expecting `boot-b` both times, and restores it.
-
-To go back to FEL mode, put the jumper back and power-cycle.
+`chip-boot-write` checks the readback. Writing one slot at a time keeps the other bootable.
