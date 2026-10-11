@@ -36,3 +36,26 @@ UNAND=/soc/nand-controller@1c03000
 	[ -s build/out/u-boot.img ]
 	[ "$(stat -c %s build/out/u-boot.img)" -lt $((0x100000)) ]
 }
+
+uboot_env() {
+	strings build/uboot/u-boot.bin | grep -x "$1=.*"
+}
+
+@test "u-boot runs the script sunxi-fel left in ram before trying the nand" {
+	uboot_env bootcmd | grep -qx 'bootcmd=run chip_boot'
+	uboot_env chip_boot | grep -q '^chip_boot=if test -n "${fel_scriptaddr}"; then source ${fel_scriptaddr}; fi; run chip_boot_a; run chip_boot_b; run chip_rescue$'
+}
+
+@test "u-boot boots boot-a and tells the kernel which slot it used" {
+	uboot_env chip_boot_a | grep -qF 'nand read ${chip_load} 0xc00000 0x2000000'
+	uboot_env chip_boot_a | grep -qF 'chip.slot=a'
+}
+
+@test "u-boot falls back to boot-b" {
+	uboot_env chip_boot_b | grep -qF 'nand read ${chip_load} 0x2c00000 0x2000000'
+	uboot_env chip_boot_b | grep -qF 'chip.slot=b'
+}
+
+@test "u-boot opens a usb serial console when no slot boots" {
+	uboot_env chip_rescue | grep -qF 'setenv stdout serial,usbacm'
+}

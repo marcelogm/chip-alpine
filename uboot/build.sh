@@ -11,6 +11,7 @@ for p in uboot/patches/*.patch; do
 	patch -d "$SRC" -p1 -R -s -f --dry-run < "$p" > /dev/null 2>&1 || patch -d "$SRC" -p1 -s -f < "$p"
 done
 cp uboot/sun5i-r8-chip-u-boot.dtsi "$SRC/arch/arm/dts/"
+cp uboot/chip-alpine.env "$SRC/board/sunxi/"
 $UMAKE CHIP_defconfig
 "$SRC/scripts/kconfig/merge_config.sh" -m -O "$OUT" "$OUT/.config" uboot/chip.config
 $UMAKE olddefconfig
