@@ -28,11 +28,13 @@
 			partition@0 {
 				label = "spl";
 				reg = <0x0 0x0 0x0 0x400000>;
+				read-only;
 			};
 
 			partition@400000 {
 				label = "spl-backup";
 				reg = <0x0 0x400000 0x0 0x400000>;
+				read-only;
 			};
 
 			partition@800000 {
@@ -42,20 +44,8 @@
 			};
 
 			partition@c00000 {
-				label = "boot-a";
-				reg = <0x0 0xc00000 0x0 0x2000000>;
-				slc-mode;
-			};
-
-			partition@2c00000 {
-				label = "boot-b";
-				reg = <0x0 0x2c00000 0x0 0x2000000>;
-				slc-mode;
-			};
-
-			partition@4c00000 {
 				label = "UBI";
-				reg = <0x0 0x4c00000 0x1 0xfb400000>;
+				reg = <0x0 0xc00000 0x1 0xff400000>;
 				slc-mode;
 			};
 		};

@@ -6,24 +6,33 @@ PARTS=$NAND/nand@0/partitions
 	[ "$(fdtget -t s $DTB $NAND status)" = okay ]
 }
 
-@test "nand is split into boot and UBI partitions" {
+@test "nand is split into the spl, its backup, u-boot and UBI" {
+	[ "$(fdtget -l $DTB $PARTS | tr '\n' ' ')" = "partition@0 partition@400000 partition@800000 partition@c00000 " ]
 	[ "$(fdtget -t s $DTB $PARTS/partition@0 label)" = spl ]
 	[ "$(fdtget -t s $DTB $PARTS/partition@400000 label)" = spl-backup ]
 	[ "$(fdtget -t s $DTB $PARTS/partition@800000 label)" = uboot ]
-	[ "$(fdtget -t s $DTB $PARTS/partition@c00000 label)" = boot-a ]
-	[ "$(fdtget -t s $DTB $PARTS/partition@2c00000 label)" = boot-b ]
-	[ "$(fdtget -t s $DTB $PARTS/partition@4c00000 label)" = UBI ]
+	[ "$(fdtget -t s $DTB $PARTS/partition@c00000 label)" = UBI ]
 }
 
-@test "linux writes the spl, its backup, the boot slots and UBI" {
-	for p in partition@0 partition@400000 partition@c00000 partition@2c00000 partition@4c00000; do
-		run fdtget $DTB $PARTS/$p read-only
-		[ "$status" -ne 0 ]
-	done
+@test "spl, its backup and u-boot are 4 MiB each" {
+	[ "$(fdtget -t x $DTB $PARTS/partition@0 reg)" = "0 0 0 400000" ]
+	[ "$(fdtget -t x $DTB $PARTS/partition@400000 reg)" = "0 400000 0 400000" ]
+	[ "$(fdtget -t x $DTB $PARTS/partition@800000 reg)" = "0 800000 0 400000" ]
 }
 
-@test "linux leaves the unused uboot partition read-only" {
+@test "UBI runs from right after u-boot to the end of the 8 GiB nand" {
+	[ "$(fdtget -t x $DTB $PARTS/partition@c00000 reg)" = "0 c00000 1 ff400000" ]
+}
+
+@test "linux leaves the spl, its backup and u-boot read-only" {
+	fdtget $DTB $PARTS/partition@0 read-only
+	fdtget $DTB $PARTS/partition@400000 read-only
 	fdtget $DTB $PARTS/partition@800000 read-only
+}
+
+@test "linux writes UBI" {
+	run fdtget $DTB $PARTS/partition@c00000 read-only
+	[ "$status" -ne 0 ]
 }
 
 @test "linux uses the ecc the spl auto-detects on the nand" {
@@ -32,12 +41,7 @@ PARTS=$NAND/nand@0/partitions
 }
 
 @test "UBI partition runs the mlc nand in slc mode" {
-	fdtget $DTB $PARTS/partition@4c00000 slc-mode
-}
-
-@test "boot slots run the mlc nand in slc mode" {
 	fdtget $DTB $PARTS/partition@c00000 slc-mode
-	fdtget $DTB $PARTS/partition@2c00000 slc-mode
 }
 
 @test "kernel never writes a bad block table to the nand" {
