@@ -35,6 +35,11 @@ PARTS=$NAND/nand@0/partitions
 	fdtget $DTB $PARTS/partition@4c00000 slc-mode
 }
 
+@test "boot slots run the mlc nand in slc mode" {
+	fdtget $DTB $PARTS/partition@c00000 slc-mode
+	fdtget $DTB $PARTS/partition@2c00000 slc-mode
+}
+
 @test "kernel never writes a bad block table to the nand" {
 	run fdtget $DTB $NAND/nand@0 nand-on-flash-bbt
 	[ "$status" -ne 0 ]

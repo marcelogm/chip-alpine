@@ -37,7 +37,7 @@ ITB=build/out/chip.itb
 	cmp -n "$(stat -c %s $ITB)" $ITB build/out/boot-b.img 0 $((64 + 0x100000))
 }
 
-@test "payload fits in a 32 MiB boot slot" {
-	[ "$(stat -c %s build/out/boot-a.img)" -le $((0x2000000)) ]
-	[ "$(stat -c %s build/out/boot-b.img)" -le $((0x2000000)) ]
+@test "payload fits in a boot slot, 16 MiB in slc mode" {
+	[ "$(stat -c %s build/out/boot-a.img)" -le $((0x1000000)) ]
+	[ "$(stat -c %s build/out/boot-b.img)" -le $((0x1000000)) ]
 }

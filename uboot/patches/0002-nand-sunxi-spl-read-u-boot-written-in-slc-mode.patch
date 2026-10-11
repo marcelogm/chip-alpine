@@ -1,0 +1,67 @@
+--- a/drivers/mtd/nand/raw/Kconfig
++++ b/drivers/mtd/nand/raw/Kconfig
+@@ -500,6 +500,13 @@
+ 	int "Allwinner NAND SPL Usable Page Size"
+ 	default 1024
+ 
++config NAND_SUNXI_SPL_SLC_MODE
++	bool "Allwinner NAND SPL reads U-Boot written in emulated SLC mode"
++	help
++	  Read U-Boot from the lower pages of each MLC eraseblock only, the
++	  way Linux writes a partition marked slc-mode on a NAND using the
++	  dist3 pairing scheme.
++
+ endif
+ 
+ config NAND_ARASAN
+--- a/drivers/mtd/nand/raw/sunxi_nand_spl.c
++++ b/drivers/mtd/nand/raw/sunxi_nand_spl.c
+@@ -600,10 +600,27 @@
+ 	return -EINVAL;
+ }
+ 
+-static int nand_read_buffer(struct nfc_config *conf, uint32_t offs,
++static uint32_t nand_physical_offset(struct nfc_config *conf, uint32_t base,
++				     uint32_t done)
++{
++	uint32_t half_block = CONFIG_SYS_NAND_BLOCK_SIZE / 2;
++	uint32_t pair, page;
++
++	if (!IS_ENABLED(CONFIG_NAND_SUNXI_SPL_SLC_MODE))
++		return base + done;
++
++	pair = (done % half_block) / conf->page_size;
++	page = pair ? 2 * pair - 1 : 0;
++
++	return base + (done / half_block) * CONFIG_SYS_NAND_BLOCK_SIZE +
++	       page * conf->page_size;
++}
++
++static int nand_read_buffer(struct nfc_config *conf, uint32_t base,
+ 			    unsigned int size, void *dest)
+ {
+ 	int first_seed = 0, page, ret;
++	uint32_t done = 0, offs = base;
+ 
+ 	size = ALIGN(size, conf->page_size);
+ 	page = offs / conf->page_size;
+@@ -611,6 +628,9 @@
+ 		first_seed = page % conf->nseeds;
+ 
+ 	for (; size; size -= conf->page_size) {
++		offs = nand_physical_offset(conf, base, done);
++		page = offs / conf->page_size;
++
+ 		if (nand_load_page(conf, offs))
+ 			return -1;
+ 
+@@ -643,8 +663,7 @@
+ 			memset(dest, 0xff, conf->page_size);
+ 		}
+ 
+-		page++;
+-		offs += conf->page_size;
++		done += conf->page_size;
+ 		dest += conf->page_size;
+ 	}
+ 

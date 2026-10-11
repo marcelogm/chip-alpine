@@ -44,11 +44,13 @@
 			partition@c00000 {
 				label = "boot-a";
 				reg = <0x0 0xc00000 0x0 0x2000000>;
+				slc-mode;
 			};
 
 			partition@2c00000 {
 				label = "boot-b";
 				reg = <0x0 0x2c00000 0x0 0x2000000>;
+				slc-mode;
 			};
 
 			partition@4c00000 {

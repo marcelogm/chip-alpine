@@ -45,3 +45,7 @@ uboot_env() {
 @test "u-boot boots the fit the spl loaded 1 MiB after itself" {
 	uboot_env chip_boot_nand | grep -q 'bootm 0x4a100000$'
 }
+
+@test "spl reads the boot slots the way linux writes them in slc mode" {
+	grep -q 'nand_physical_offset' build/src/u-boot-2026.07/drivers/mtd/nand/raw/sunxi_nand_spl.c
+}
