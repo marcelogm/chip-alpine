@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+. dev/lib.sh
 
 cuts=${1:-10}
 log=build/logs/nand-powercut.log
@@ -9,11 +10,6 @@ mkdir -p build/logs
 boot() {
 	dev/fel-boot-ram.sh > /dev/null
 	dev/wait-for-console.sh
-}
-
-press() {
-	printf '%s, then press Enter: ' "$1"
-	read -r _ < /dev/tty
 }
 
 boot
