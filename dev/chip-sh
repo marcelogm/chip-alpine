@@ -1,0 +1,54 @@
+#!/usr/bin/env -S python3 -I
+import os
+import re
+import select
+import sys
+import termios
+import time
+import tty
+
+DEVICE = os.environ.get("CHIP_TTY", "/dev/ttyACM0")
+
+
+def open_console():
+    fd = os.open(DEVICE, os.O_RDWR | os.O_NOCTTY)
+    tty.setraw(fd)
+    attrs = termios.tcgetattr(fd)
+    attrs[4] = attrs[5] = termios.B115200
+    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+    return fd
+
+
+def drain(fd, seconds):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        ready, _, _ = select.select([fd], [], [], 0.1)
+        if ready:
+            os.read(fd, 4096)
+
+
+def run(command, timeout):
+    fd = open_console()
+    drain(fd, 0.3)
+    tag = str(time.time_ns())
+    begin = f"__BEGIN_{tag}__\n"
+    end = re.compile(rf"__END_{tag}__ (\d+)")
+    os.write(fd, f"echo __''BEGIN_{tag}__; {command}; echo __''END_{tag}__ $?\r".encode())
+    data = ""
+    deadline = time.time() + timeout
+    while time.time() < deadline and not end.search(data):
+        ready, _, _ = select.select([fd], [], [], 0.2)
+        if ready:
+            data += os.read(fd, 4096).decode(errors="replace").replace("\r", "")
+    os.close(fd)
+    start = data.find(begin)
+    body = data[start + len(begin):] if start >= 0 else data
+    match = end.search(body)
+    sys.stdout.write(body[:match.start()] if match else body)
+    return int(match.group(1)) if match else 124
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("usage: chip-sh COMMAND [TIMEOUT_SECONDS]")
+    sys.exit(run(sys.argv[1], float(sys.argv[2]) if len(sys.argv) > 2 else 30))

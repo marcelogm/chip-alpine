@@ -1,7 +1,7 @@
 IMAGE := chip-alpine-build
 RUN := podman run --rm -v $(CURDIR):/work:Z -w /work $(IMAGE)
 
-.PHONY: container sources uboot kernel initramfs image test fel-boot
+.PHONY: container sources uboot kernel initramfs image test
 
 container:
 	podman build -t $(IMAGE) -f Containerfile .
@@ -23,6 +23,3 @@ image: uboot kernel initramfs
 
 test:
 	$(RUN) bats tests
-
-fel-boot:
-	sudo dev/fel-boot-ram.sh

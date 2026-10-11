@@ -1,0 +1,38 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+
+local_file=$1
+remote_file=$2
+
+tries=0
+until ping -c1 -W1 192.168.81.1 > /dev/null 2>&1; do
+	tries=$((tries + 1))
+	if [ "$tries" -ge 30 ]; then
+		echo "board not reachable at 192.168.81.1: give the host 192.168.81.2/24 on the board's USB network (see README)" >&2
+		exit 1
+	fi
+	sleep 1
+done
+
+dev/chip-sh "killall nc 2> /dev/null; rm -f $remote_file; (nc -l -p 9000 > $remote_file &)" 5
+sleep 1
+python3 -I -c 'import socket, sys, time
+for _ in range(10):
+    try:
+        s = socket.create_connection(("192.168.81.1", 9000))
+        break
+    except ConnectionRefusedError:
+        time.sleep(0.5)
+else:
+    sys.exit("connection refused at 192.168.81.1:9000")
+with open(sys.argv[1], "rb") as f:
+    s.sendfile(f)
+s.close()' "$local_file"
+
+expected=$(sha256sum < "$local_file" | cut -d' ' -f1)
+actual=$(dev/chip-sh "while pidof nc > /dev/null; do sleep 1; done; sha256sum < $remote_file" 120 | cut -d' ' -f1)
+if [ "$actual" != "$expected" ]; then
+	echo "$remote_file on the board does not match $local_file" >&2
+	exit 1
+fi

@@ -1,8 +1,6 @@
 # chip-alpine
 
-Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., using mainline U-Boot and Linux.
-
-Status: phase 0 — booting entirely from RAM over FEL, nothing is written to the NAND.
+Alpine Linux on the internal NAND of the Next Thing Co. C.H.I.P., running mainline Linux. The boot loader is U-Boot 2022.01 with the NAND patches from NextThingCo's [x-chip-uboot](https://github.com/NextThingCo/x-chip-uboot) (SLC emulation on the MLC NAND and DMA reads in the sun5i SPL), kept in `uboot/patches/`.
 
 ## Build
 
@@ -13,23 +11,86 @@ make container
 make image
 ```
 
-## Boot from RAM (phase 0)
+The outputs are in `build/out/`.
 
-Requires `sunxi-tools` on the host.
+## Host setup
 
-1. Power off the C.H.I.P., connect the FEL pin (U14 pin 7) to a GND pin.
-2. Connect the micro-USB port to the host.
-3. `sudo dev/fel-boot-ram.sh`
-4. A serial console shows up as `/dev/ttyACM0` and a USB network interface with the board at `192.168.81.1`.
+Requires `sunxi-tools`.
 
-Host notes:
+Allow `sunxi-fel` to run without root (once):
 
-- The board runs no DHCP server: give the host's new USB network interface `192.168.81.2/24`, e.g. `sudo ip addr add 192.168.81.2/24 dev <iface>`.
-- Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
+```sh
+sudo cp dev/99-chip-fel.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+```
 
-Status signals while the FEL jumper is in:
+Your user must be in the `dialout` group, which also gives access to `/dev/ttyACM0`.
 
-- LED off: U-Boot or early kernel.
-- LED blinking: kernel running.
-- LED solid: USB console ready.
-- Board back in FEL mode (`lsusb` shows `1f3a:efe8`): boot failed. Within seconds means U-Boot or FIT; about 10 s after the blinking started means kernel panic.
+The board runs no DHCP server and its USB network interface is recreated on every boot. Give the host a persistent address, keyed on the board's fixed MAC (once):
+
+```sh
+nmcli con add type ethernet con-name chip-usb ethernet.mac-address 02:c4:1b:00:00:01 ipv4.method manual ipv4.addresses 192.168.81.2/24 ipv6.method disabled
+```
+
+Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the shell; stop it with `sudo systemctl stop ModemManager` while using the console.
+
+## Flash
+
+This erases the whole NAND.
+
+1. Power off the C.H.I.P. and connect the FEL pin (U14 pin 7) to a GND pin.
+2. Connect the micro-USB port to the host. Use only this port.
+3. Run:
+
+```sh
+dev/flash-nand.sh
+```
+
+It boots Linux from RAM over FEL, formats the UBI partition and writes the FIT image to the `boot-a` and `boot-b` volumes. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
+
+4. Remove the jumper and power-cycle the board.
+
+## How it boots
+
+The SPL loads U-Boot, and U-Boot boots the FIT image in the UBI volume `boot-a`. If `boot-a` cannot be read or fails the FIT hash check, it boots `boot-b`. If neither boots, U-Boot stops at its prompt. A kernel that panics reboots into the same slot.
+
+The kernel command line says which slot booted: `chip.slot=a` or `chip.slot=b` (`ram` when booted over FEL).
+
+| NAND | Size | Content |
+|---|---|---|
+| `spl` at 0x0 | 4 MiB | SPL with ECC, raw |
+| `spl-backup` at 0x400000 | 4 MiB | same |
+| `uboot` at 0x800000 | 4 MiB | `u-boot-dtb.bin`, MLC with ECC |
+| `UBI` at 0xc00000 | rest, SLC mode | UBI volumes `boot-a` and `boot-b`, 16 MiB each, holding the FIT |
+
+Linux sees the SPL and U-Boot partitions read-only.
+
+## Console
+
+When Linux is up, the board shows a serial console on `/dev/ttyACM0` (a root shell) and a USB network interface with the board at `192.168.81.1`.
+
+Run a command on the board from the host and get its exit status:
+
+```sh
+dev/chip-sh 'cat /proc/mtd'
+```
+
+## Status from lsusb
+
+| `lsusb` | Board |
+|---|---|
+| `1f3a:efe8` | FEL mode: jumper in place, or no valid SPL on the NAND |
+| `1d6b:0104` | Linux is up |
+| nothing | stuck before Linux, e.g. neither boot volume boots |
+
+## Update the boot image
+
+With Linux up, copy a new FIT to the board and write it to a slot:
+
+```sh
+dev/chip-put build/out/chip.itb /tmp/chip.itb
+dev/chip-sh 'chip-boot-write boot-b /tmp/chip.itb' 600
+dev/chip-sh 'chip-boot-write boot-a /tmp/chip.itb' 600
+```
+
+`chip-boot-write` checks the readback. Writing one slot at a time keeps the other bootable.

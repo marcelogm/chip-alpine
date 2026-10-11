@@ -1,7 +1,7 @@
 /dts-v1/;
 
 / {
-	description = "chip-alpine RAM boot";
+	description = "chip-alpine";
 	#address-cells = <1>;
 
 	images {
@@ -44,9 +44,9 @@
 	};
 
 	configurations {
-		default = "ram";
+		default = "chip";
 
-		ram {
+		chip {
 			kernel = "kernel";
 			fdt = "fdt";
 			ramdisk = "ramdisk";

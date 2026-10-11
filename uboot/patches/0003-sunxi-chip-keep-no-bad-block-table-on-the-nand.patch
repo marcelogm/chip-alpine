@@ -1,0 +1,10 @@
+--- a/arch/arm/dts/sun5i-r8-chip.dts
++++ b/arch/arm/dts/sun5i-r8-chip.dts
+@@ -187,7 +187,6 @@
+ 		allwinner,rb = <0>;
+ 		nand-ecc-mode = "hw";
+ 		nand-ecc-maximize;
+-		nand-on-flash-bbt;
+ 	};
+ };
+ 

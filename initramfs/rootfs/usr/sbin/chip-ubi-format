@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+VOLUME_SIZE=16MiB
+
+usage() {
+	echo "usage: chip-ubi-format" >&2
+	exit 2
+}
+
+[ $# -eq 0 ] || usage
+
+mtd=/dev/$(awk -F: '/"UBI"/ { print $1 }' /proc/mtd)
+[ ! -e /dev/ubi0 ] || ubidetach -p "$mtd"
+ubiformat -y -q "$mtd"
+echo "UBI: formatted $mtd"
+ubiattach -p "$mtd" > /dev/null
+for slot in boot-a boot-b; do
+	ubimkvol /dev/ubi0 -N "$slot" -s "$VOLUME_SIZE" -t dynamic > /dev/null
+	echo "$slot: created a $VOLUME_SIZE volume"
+done

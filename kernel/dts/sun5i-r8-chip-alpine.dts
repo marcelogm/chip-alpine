@@ -17,6 +17,8 @@
 		reg = <0>;
 		allwinner,rb = <0>;
 		nand-ecc-mode = "hw";
+		nand-ecc-strength = <40>;
+		nand-ecc-step-size = <1024>;
 
 		partitions {
 			compatible = "fixed-partitions";
@@ -24,9 +26,27 @@
 			#size-cells = <2>;
 
 			partition@0 {
-				label = "nand";
-				reg = <0x0 0x0 0x2 0x0>;
+				label = "spl";
+				reg = <0x0 0x0 0x0 0x400000>;
 				read-only;
+			};
+
+			partition@400000 {
+				label = "spl-backup";
+				reg = <0x0 0x400000 0x0 0x400000>;
+				read-only;
+			};
+
+			partition@800000 {
+				label = "uboot";
+				reg = <0x0 0x800000 0x0 0x400000>;
+				read-only;
+			};
+
+			partition@c00000 {
+				label = "UBI";
+				reg = <0x0 0xc00000 0x1 0xff400000>;
+				slc-mode;
 			};
 		};
 	};
