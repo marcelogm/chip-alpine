@@ -37,17 +37,25 @@ Fedora's ModemManager probes `/dev/ttyACM*` and may type AT commands into the sh
 
 ## Flash
 
-This erases the whole NAND.
+This erases the whole NAND. Run `make data` and `make image` first.
+
+Save the settings of the board once:
+
+```sh
+dev/flash-setup.sh
+```
+
+It asks for the hostname (default `chip-alpine`), the public key file installed for root (default `~/.ssh/chip_ed25519.pub`), and a Wi-Fi network and its password (optional), and writes them to `~/.config/chip-alpine/flash.conf`, readable only by you.
 
 1. Power off the C.H.I.P. and connect the FEL pin (U14 pin 7) to a GND pin.
 2. Connect the micro-USB port to the host. Use only this port.
 3. Run:
 
 ```sh
-dev/flash-nand.sh [--hostname NAME] [--ssh-key FILE] [--wifi-ssid SSID --wifi-psk PSK]
+dev/flash-nand.sh
 ```
 
-`--ssh-key` is a public key file installed for root, `--hostname` defaults to `chip-alpine`, and the two Wi-Fi options go together. Run `make data` and `make image` first.
+`dev/flash-nand.sh --print-settings` shows the settings it will use without touching the board. Options override the saved settings: `--hostname NAME`, `--ssh-key FILE`, `--wifi-ssid SSID --wifi-psk PSK`, and `--config FILE` reads another settings file.
 
 It boots Linux from RAM over FEL, formats the UBI partition, writes the FIT image to the `boot-a` and `boot-b` volumes and the system data (package cache and configuration) to the `data` volume. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
 
