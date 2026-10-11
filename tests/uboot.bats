@@ -41,9 +41,9 @@ uboot_env() {
 	strings build/uboot/u-boot.bin | grep -x "$1=.*"
 }
 
-@test "u-boot runs the script sunxi-fel left in ram before trying the nand" {
+@test "u-boot runs the script sunxi-fel left in ram instead of the nand slots" {
 	uboot_env bootcmd | grep -qx 'bootcmd=run chip_boot'
-	uboot_env chip_boot | grep -q '^chip_boot=if test -n "${fel_scriptaddr}"; then source ${fel_scriptaddr}; fi; run chip_boot_a; run chip_boot_b; run chip_rescue$'
+	uboot_env chip_boot | grep -q '^chip_boot=if test -n "${fel_scriptaddr}"; then source ${fel_scriptaddr}; else run chip_boot_a; run chip_boot_b; fi; run chip_rescue$'
 }
 
 @test "u-boot boots boot-a and tells the kernel which slot it used" {

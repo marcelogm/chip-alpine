@@ -37,6 +37,6 @@ PAGE_WITH_OOB=$((0x4000 + 0x500))
 @test "flash script resets only when u-boot reads back intact" {
 	size=$(printf '0x%x' "$(stat -c %s build/out/u-boot.img)")
 	grep -qx "if cmp.b 0x44200000 0x45000000 $size; then reset; fi" $FLASH
-	[ "$(tail -n 1 $FLASH)" = 'run chip_rescue' ]
+	[ "$(tail -n 1 $FLASH)" = "if cmp.b 0x44200000 0x45000000 $size; then reset; fi" ]
 	dumpimage -l build/out/flash-uboot.scr | grep -q 'Script'
 }
