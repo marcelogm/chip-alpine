@@ -15,17 +15,18 @@ PARTS=$NAND/nand@0/partitions
 	[ "$(fdtget -t s $DTB $PARTS/partition@4c00000 label)" = UBI ]
 }
 
-@test "linux writes only the boot slots and UBI" {
-	for p in partition@0 partition@400000 partition@800000; do
-		fdtget $DTB $PARTS/$p read-only
-	done
-	for p in partition@c00000 partition@2c00000 partition@4c00000; do
+@test "linux writes the spl, its backup, the boot slots and UBI" {
+	for p in partition@0 partition@400000 partition@c00000 partition@2c00000 partition@4c00000; do
 		run fdtget $DTB $PARTS/$p read-only
 		[ "$status" -ne 0 ]
 	done
 }
 
-@test "linux uses the same ecc as u-boot on the nand" {
+@test "linux leaves the unused uboot partition read-only" {
+	fdtget $DTB $PARTS/partition@800000 read-only
+}
+
+@test "linux uses the ecc the spl auto-detects on the nand" {
 	[ "$(fdtget $DTB $NAND/nand@0 nand-ecc-strength)" = 40 ]
 	[ "$(fdtget $DTB $NAND/nand@0 nand-ecc-step-size)" = 1024 ]
 }
