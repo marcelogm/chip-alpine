@@ -43,10 +43,12 @@ This erases the whole NAND.
 3. Run:
 
 ```sh
-dev/flash-nand.sh
+dev/flash-nand.sh [--hostname NAME] [--ssh-key FILE] [--wifi-ssid SSID --wifi-psk PSK]
 ```
 
-It boots Linux from RAM over FEL, formats the UBI partition and writes the FIT image to the `boot-a` and `boot-b` volumes. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
+`--ssh-key` is a public key file installed for root, `--hostname` defaults to `chip-alpine`, and the two Wi-Fi options go together. Run `make image` first.
+
+It boots Linux from RAM over FEL, formats the UBI partition, writes the FIT image to the `boot-a` and `boot-b` volumes and the system data (package cache and configuration) to the `data` volume. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
 
 4. Remove the jumper and power-cycle the board.
 
@@ -64,6 +66,34 @@ The kernel command line says which slot booted: `chip.slot=a` or `chip.slot=b` (
 | `UBI` at 0xc00000 | rest, SLC mode | UBI volumes `boot-a` and `boot-b`, 16 MiB each, holding the FIT |
 
 Linux sees the SPL and U-Boot partitions read-only.
+
+## First boot
+
+The board boots a diskless Alpine Linux in RAM, with OpenRC, from the packages and configuration in the `data` volume. Log in over the USB network with the key given at flash time:
+
+```sh
+ssh root@192.168.81.1
+```
+
+or at the Wi-Fi IP if you set a network. SSH accepts keys only. The serial console on `/dev/ttyACM0` logs in as `root` without a password.
+
+## Keeping changes
+
+The root filesystem is in RAM, so changes are lost on reboot unless saved:
+
+- `lbu commit` saves the configuration to `/media/data`.
+- `apk add PACKAGE` keeps the package in `/media/data/cache`; it is installed again on the next boot without network.
+
+## USB stick
+
+An ext4 stick in the USB-A port can hold the data of your services. Find its UUID with `blkid`, then:
+
+```sh
+mkdir -p /media/usb
+echo 'UUID=<uuid> /media/usb ext4 defaults,nofail 0 2' >> /etc/fstab
+mount /media/usb
+lbu commit
+```
 
 ## Console
 
