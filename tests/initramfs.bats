@@ -44,10 +44,13 @@ listing() {
 
 @test "boot slot writer and its tools are included" {
 	listing | grep -qx 'usr/sbin/chip-boot-write'
-	listing | grep -qE '(^|/)flash_erase$'
-	listing | grep -qE '(^|/)nandwrite$'
+	listing | grep -qE '(^|/)ubiattach$'
+	listing | grep -qE '(^|/)ubiupdatevol$'
 }
 
-@test "spl writer is included" {
-	listing | grep -qx 'usr/sbin/chip-spl-write'
+@test "ubi formatter and its tools are included" {
+	listing | grep -qx 'usr/sbin/chip-ubi-format'
+	listing | grep -qE '(^|/)ubiformat$'
+	listing | grep -qE '(^|/)ubidetach$'
+	listing | grep -qE '(^|/)ubimkvol$'
 }

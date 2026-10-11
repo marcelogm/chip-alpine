@@ -11,25 +11,34 @@ case "$1" in
 	boot-a|boot-b) ;;
 	*) usage ;;
 esac
-label=$1
+slot=$1
 image=$2
 
-mtd=$(grep "\"$label\"" /proc/mtd | cut -d: -f1)
-if [ "$(cat "/sys/class/mtd/$mtd/bad_blocks")" != 0 ]; then
-	echo "$label has bad blocks; the SPL cannot skip them" >&2
+[ -e /dev/ubi0 ] || ubiattach -p "/dev/$(awk -F: '/"UBI"/ { print $1 }' /proc/mtd)" > /dev/null
+
+volume=
+for name in /sys/class/ubi/ubi0_*/name; do
+	if [ -f "$name" ] && [ "$(cat "$name")" = "$slot" ]; then
+		volume=$(basename "$(dirname "$name")")
+	fi
+done
+if [ -z "$volume" ]; then
+	echo "$slot: no such UBI volume; create the boot volumes with chip-ubi-format" >&2
 	exit 1
 fi
 
 size=$(stat -c %s "$image")
-expected=$(sha256sum < "$image" | cut -d' ' -f1)
-
-flash_erase -q "/dev/$mtd" 0 0
-nandwrite -q -p "/dev/$mtd" "$image"
-nanddump -q --bb=skipbad -l "$size" -f /tmp/readback "/dev/$mtd"
-actual=$(head -c "$size" /tmp/readback | sha256sum | cut -d' ' -f1)
-rm -f /tmp/readback
-if [ "$actual" != "$expected" ]; then
-	echo "$label: readback does not match $image" >&2
+volume_size=$(( $(cat "/sys/class/ubi/$volume/reserved_ebs") * $(cat "/sys/class/ubi/$volume/usable_eb_size") ))
+if [ "$size" -gt "$volume_size" ]; then
+	echo "$slot: $image is $size bytes, the volume holds $volume_size" >&2
 	exit 1
 fi
-echo "$label: wrote $size bytes"
+
+expected=$(sha256sum < "$image" | cut -d' ' -f1)
+ubiupdatevol "/dev/$volume" "$image"
+actual=$(head -c "$size" "/dev/$volume" | sha256sum | cut -d' ' -f1)
+if [ "$actual" != "$expected" ]; then
+	echo "$slot: readback does not match $image" >&2
+	exit 1
+fi
+echo "$slot: wrote $size bytes"
