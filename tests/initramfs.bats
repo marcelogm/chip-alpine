@@ -41,3 +41,9 @@ listing() {
 @test "nand stress tool is included" {
 	listing | grep -qx 'usr/sbin/chip-nand-stress'
 }
+
+@test "boot slot writer and its tools are included" {
+	listing | grep -qx 'usr/sbin/chip-boot-write'
+	listing | grep -qE '(^|/)flash_erase$'
+	listing | grep -qE '(^|/)nandwrite$'
+}

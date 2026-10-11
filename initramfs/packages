@@ -1,6 +1,7 @@
 alpine-baselayout
 busybox
 iw
+mtd-utils-flash
 mtd-utils-nand
 mtd-utils-ubi
 wpa_supplicant
