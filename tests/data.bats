@@ -63,6 +63,13 @@ apkovl() {
 	tar -tzvf "$out"/*.apkovl.tar.gz | grep -q 'etc/runlevels/default/wpa_supplicant -> /etc/init.d/wpa_supplicant'
 }
 
+@test "apkovl takes paths relative to where it is run" {
+	dir=$(mktemp -d); echo 'ssh-ed25519 AAAA test' > "$dir/key.pub"
+	apkovl=$PWD/data/apkovl.sh
+	(cd "$dir" && "$apkovl" out --ssh-key key.pub)
+	tar -tzf "$dir/out/chip-alpine.apkovl.tar.gz" | grep -qx 'root/.ssh/authorized_keys'
+}
+
 @test "apkovl needs both wifi name and password" {
 	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home
 	[ "$status" -eq 2 ]

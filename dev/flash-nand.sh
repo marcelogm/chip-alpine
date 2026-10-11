@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
+caller=$PWD
 cd "$(dirname "$0")/.."
+
+absolute() {
+	case $1 in
+	/* | '') printf '%s\n' "$1" ;;
+	*) printf '%s\n' "$caller/$1" ;;
+	esac
+}
 
 usage() {
 	echo "usage: $0 [--hostname NAME] [--ssh-key FILE] [--wifi-ssid SSID --wifi-psk PSK]" >&2
@@ -24,6 +32,7 @@ while [ $# -gt 0 ]; do
 	shift 2
 done
 
+SSH_KEY=$(absolute "$SSH_KEY")
 [ -z "$SSH_KEY" ] || [ -f "$SSH_KEY" ] || usage
 [ -n "$WIFI_SSID" ] || [ -z "$WIFI_PSK" ] || usage
 [ -z "$WIFI_SSID" ] || [ -n "$WIFI_PSK" ] || usage
