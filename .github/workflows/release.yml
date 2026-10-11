@@ -1,0 +1,26 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: make container
+      - run: make data image
+      - run: make test
+      - if: github.ref_type == 'tag'
+        run: make release VERSION="$GITHUB_REF_NAME"
+      - if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/release/* --title "$GITHUB_REF_NAME" --notes "Extract the bundle and follow its README to flash Alpine Linux to the C.H.I.P. NAND."
