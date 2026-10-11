@@ -86,3 +86,35 @@ apkovl() {
 	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid 'a"b' --wifi-psk x
 	[ "$status" -eq 2 ]
 }
+
+@test "apkovl takes a hostname of up to 63 letters, digits and dashes" {
+	run data/apkovl.sh "$(mktemp -d)" --hostname "chip-$(printf 'a%.0s' $(seq 58))"
+	[ "$status" -eq 0 ]
+	run data/apkovl.sh "$(mktemp -d)" --hostname "chip-$(printf 'a%.0s' $(seq 59))"
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --hostname -chip
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --hostname chip_alpine
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --hostname ''
+	[ "$status" -eq 2 ]
+}
+
+@test "apkovl takes a wifi password of 8 to 63 printable characters" {
+	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home --wifi-psk 1234567
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home --wifi-psk "$(printf 'p%.0s' $(seq 64))"
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home --wifi-psk "$(printf 'pass\tword')"
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home --wifi-psk 'senha é boa'
+	[ "$status" -eq 2 ]
+	run data/apkovl.sh "$(mktemp -d)" --wifi-ssid home --wifi-psk "$(printf 'p%.0s' $(seq 63))"
+	[ "$status" -eq 0 ]
+}
+
+@test "apkovl takes a wifi key of 64 hex digits as the raw key" {
+	key=$(printf '0123456789abcdef%.0s' 1 2 3 4)
+	out=$(mktemp -d); data/apkovl.sh "$out" --wifi-ssid home --wifi-psk "$key"
+	tar -xzOf "$out"/*.apkovl.tar.gz etc/wpa_supplicant/wpa_supplicant.conf | grep -qx "[[:space:]]*psk=$key"
+}

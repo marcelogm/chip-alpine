@@ -2,6 +2,7 @@
 set -eu
 caller=$PWD
 cd "$(dirname "$0")/.."
+. data/settings.sh
 
 absolute() {
 	case $1 in
@@ -18,13 +19,6 @@ usage() {
 enable() {
 	mkdir -p "$STAGE/etc/runlevels/$1"
 	ln -s "/etc/init.d/$2" "$STAGE/etc/runlevels/$1/$2"
-}
-
-reject_unsafe() {
-	case $1 in
-	*'"'* | *'
-'*) usage ;;
-	esac
 }
 
 [ $# -ge 1 ] || usage
@@ -50,11 +44,11 @@ done
 OUT_DIR=$(absolute "$OUT_DIR")
 SSH_KEY=$(absolute "$SSH_KEY")
 [ -z "$SSH_KEY" ] || [ -f "$SSH_KEY" ] || usage
-[ -n "$WIFI_SSID" ] || [ -z "$WIFI_PSK" ] || usage
-[ -z "$WIFI_SSID" ] || [ -n "$WIFI_PSK" ] || usage
-reject_unsafe "$WIFI_SSID"
-reject_unsafe "$WIFI_PSK"
-[ -n "$HOSTNAME_WANTED" ] || usage
+valid_hostname "$HOSTNAME_WANTED" || usage
+if [ -n "$WIFI_SSID$WIFI_PSK" ]; then
+	valid_wifi_ssid "$WIFI_SSID" || usage
+	valid_wifi_psk "$WIFI_PSK" || usage
+fi
 
 mkdir -p "$OUT_DIR"
 OUT_DIR=$(cd "$OUT_DIR" && pwd)
@@ -81,8 +75,13 @@ fi
 
 if [ -n "$WIFI_SSID" ]; then
 	mkdir -p "$STAGE/etc/wpa_supplicant"
-	printf 'ctrl_interface=/var/run/wpa_supplicant\n\nnetwork={\n\tssid="%s"\n\tpsk="%s"\n}\n' \
-		"$WIFI_SSID" "$WIFI_PSK" > "$STAGE/etc/wpa_supplicant/wpa_supplicant.conf"
+	if wifi_psk_is_raw_key "$WIFI_PSK"; then
+		psk=$WIFI_PSK
+	else
+		psk=\"$WIFI_PSK\"
+	fi
+	printf 'ctrl_interface=/var/run/wpa_supplicant\n\nnetwork={\n\tssid="%s"\n\tpsk=%s\n}\n' \
+		"$WIFI_SSID" "$psk" > "$STAGE/etc/wpa_supplicant/wpa_supplicant.conf"
 	chmod 600 "$STAGE/etc/wpa_supplicant/wpa_supplicant.conf"
 	printf '\nauto wlan0\niface wlan0 inet dhcp\n' >> "$STAGE/etc/network/interfaces"
 	enable default wpa_supplicant
