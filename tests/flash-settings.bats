@@ -202,3 +202,18 @@ ssh_key=$KEY
 wifi_ssid=home net
 wifi_psk=set" ]
 }
+
+@test "flash checks every build output before touching the board" {
+	tree=$(mktemp -d); bin=$(mktemp -d)
+	cp -R flash data "$tree/"
+	mkdir -p "$tree/build/out/data/cache"
+	touch "$tree/build/out/data/cache/APKINDEX.test.tar.gz"
+	for file in u-boot-sunxi-with-spl.bin sunxi-spl-with-ecc.bin flash-uboot.scr boot-ram.scr chip.itb; do
+		touch "$tree/build/out/$file"
+	done
+	printf '#!/bin/sh\ntouch %s/touched\nexit 1\n' "$bin" > "$bin/sunxi-fel"; chmod +x "$bin/sunxi-fel"
+	PATH="$bin:$PATH" run "$tree/flash/flash-nand.sh"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *build/out/uboot-4m.bin* ]]
+	[ ! -e "$bin/touched" ]
+}

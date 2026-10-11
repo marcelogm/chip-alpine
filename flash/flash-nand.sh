@@ -12,7 +12,7 @@ absolute() {
 }
 
 missing() {
-	echo "$1 is missing: run make $2" >&2
+	echo "$1 is missing: build it with make $2 or download a release" >&2
 	exit 1
 }
 
@@ -112,7 +112,9 @@ if [ -n "$PRINT_SETTINGS" ]; then
 	exit 0
 fi
 
-[ -f build/out/chip.itb ] || missing build/out/chip.itb image
+for file in u-boot-sunxi-with-spl.bin sunxi-spl-with-ecc.bin uboot-4m.bin flash-uboot.scr boot-ram.scr chip.itb; do
+	[ -f "build/out/$file" ] || missing "build/out/$file" image
+done
 ls build/out/data/cache/APKINDEX.*.tar.gz > /dev/null 2>&1 || missing build/out/data/cache data
 
 set -- --hostname "$HOSTNAME_WANTED"
