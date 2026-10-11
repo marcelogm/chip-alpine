@@ -59,3 +59,7 @@ uboot_env() {
 @test "u-boot opens a usb serial console when no slot boots" {
 	uboot_env chip_rescue | grep -qF 'setenv stdout serial,usbacm'
 }
+
+@test "u-boot starts the usb controller before opening the rescue console" {
+	grep -q 'int board_usb_init' build/src/u-boot-2026.07/board/sunxi/board.c
+}
