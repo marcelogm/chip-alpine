@@ -47,3 +47,7 @@ listing() {
 	listing | grep -qE '(^|/)flash_erase$'
 	listing | grep -qE '(^|/)nandwrite$'
 }
+
+@test "spl writer is included" {
+	listing | grep -qx 'usr/sbin/chip-spl-write'
+}

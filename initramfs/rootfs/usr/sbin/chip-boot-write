@@ -2,33 +2,34 @@
 set -eu
 
 usage() {
-	echo "usage: chip-boot-write IMAGE boot-a|boot-b..." >&2
+	echo "usage: chip-boot-write boot-a|boot-b IMAGE" >&2
 	exit 2
 }
 
-[ $# -ge 2 ] || usage
-image=$1
-shift
-for label in "$@"; do
-	case "$label" in
-		boot-a|boot-b) ;;
-		*) usage ;;
-	esac
-done
+[ $# -eq 2 ] || usage
+case "$1" in
+	boot-a|boot-b) ;;
+	*) usage ;;
+esac
+label=$1
+image=$2
+
+mtd=$(grep "\"$label\"" /proc/mtd | cut -d: -f1)
+if [ "$(cat "/sys/class/mtd/$mtd/bad_blocks")" != 0 ]; then
+	echo "$label has bad blocks; the SPL cannot skip them" >&2
+	exit 1
+fi
 
 size=$(stat -c %s "$image")
 expected=$(sha256sum < "$image" | cut -d' ' -f1)
 
-for label in "$@"; do
-	mtd=/dev/$(grep "\"$label\"" /proc/mtd | cut -d: -f1)
-	flash_erase -q "$mtd" 0 0
-	nandwrite -q -p "$mtd" "$image"
-	nanddump -q --bb=skipbad -l "$size" -f /tmp/readback "$mtd"
-	actual=$(head -c "$size" /tmp/readback | sha256sum | cut -d' ' -f1)
-	rm -f /tmp/readback
-	if [ "$actual" != "$expected" ]; then
-		echo "$label: readback does not match $image" >&2
-		exit 1
-	fi
-	echo "$label: wrote $size bytes"
-done
+flash_erase -q "/dev/$mtd" 0 0
+nandwrite -q -p "/dev/$mtd" "$image"
+nanddump -q --bb=skipbad -l "$size" -f /tmp/readback "/dev/$mtd"
+actual=$(head -c "$size" /tmp/readback | sha256sum | cut -d' ' -f1)
+rm -f /tmp/readback
+if [ "$actual" != "$expected" ]; then
+	echo "$label: readback does not match $image" >&2
+	exit 1
+fi
+echo "$label: wrote $size bytes"
