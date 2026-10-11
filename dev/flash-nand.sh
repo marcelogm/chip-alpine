@@ -10,6 +10,11 @@ absolute() {
 	esac
 }
 
+missing() {
+	echo "$1 is missing: run make $2" >&2
+	exit 1
+}
+
 usage() {
 	echo "usage: $0 [--hostname NAME] [--ssh-key FILE] [--wifi-ssid SSID --wifi-psk PSK]" >&2
 	exit 2
@@ -41,6 +46,9 @@ set --
 [ -z "$HOSTNAME_WANTED" ] || set -- "$@" --hostname "$HOSTNAME_WANTED"
 [ -z "$SSH_KEY" ] || set -- "$@" --ssh-key "$SSH_KEY"
 [ -z "$WIFI_SSID" ] || set -- "$@" --wifi-ssid "$WIFI_SSID" --wifi-psk "$WIFI_PSK"
+
+[ -f build/out/chip.itb ] || missing build/out/chip.itb image
+ls build/out/data/cache/APKINDEX.*.tar.gz > /dev/null 2>&1 || missing build/out/data/cache data
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

@@ -21,7 +21,7 @@ initramfs: kernel
 data: container
 	$(RUN) data/build.sh
 
-image: uboot kernel initramfs data
+image: uboot kernel initramfs
 	$(RUN) image/build.sh
 
 test:

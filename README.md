@@ -8,10 +8,11 @@ Requires podman.
 
 ```sh
 make container
+make data
 make image
 ```
 
-The outputs are in `build/out/`.
+The outputs are in `build/out/`. `make data` downloads the packages of the system to `build/out/data/cache`; run it again only to refresh them.
 
 ## Host setup
 
@@ -46,7 +47,7 @@ This erases the whole NAND.
 dev/flash-nand.sh [--hostname NAME] [--ssh-key FILE] [--wifi-ssid SSID --wifi-psk PSK]
 ```
 
-`--ssh-key` is a public key file installed for root, `--hostname` defaults to `chip-alpine`, and the two Wi-Fi options go together. Run `make image` first.
+`--ssh-key` is a public key file installed for root, `--hostname` defaults to `chip-alpine`, and the two Wi-Fi options go together. Run `make data` and `make image` first.
 
 It boots Linux from RAM over FEL, formats the UBI partition, writes the FIT image to the `boot-a` and `boot-b` volumes and the system data (package cache and configuration) to the `data` volume. Then it loads U-Boot over FEL, which writes the SPL (twice) and itself to the NAND and boots `boot-a`.
 
